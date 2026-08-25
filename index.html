@@ -1,0 +1,1107 @@
+<title>Oil Cooler Flow Watch</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    color-scheme: dark;
+    --bg:#0a0d12;
+    --surface:#12161f;
+    --surface-raised:#171d29;
+    --surface-hover:#1c2330;
+    --border:rgba(255,255,255,0.09);
+    --border-soft:rgba(255,255,255,0.05);
+    --text-primary:#f5f3ec;
+    --text-secondary:#a7acb9;
+    --text-muted:#6c7382;
+    --accent:#ff9d2e;
+    --accent-soft:rgba(255,157,46,0.14);
+    --flow:#3987e5;
+    --flow-soft:rgba(57,135,229,0.14);
+    --flow-line:rgba(57,135,229,0.55);
+    --cool:#eda100;
+    --cool-soft:rgba(237,161,0,0.14);
+    --cool-line:rgba(237,161,0,0.55);
+    --good:#0ca30c;
+    --good-soft:rgba(12,163,12,0.15);
+    --warning:#fab219;
+    --warning-soft:rgba(250,178,25,0.15);
+    --critical:#d94b4b;
+    --critical-soft:rgba(217,75,75,0.14);
+    --critical-band:rgba(217,75,75,0.08);
+    --idle:#7a8291;
+    --idle-soft:rgba(122,130,145,0.16);
+    --temp:#9085e9;
+    --temp-soft:rgba(144,133,233,0.16);
+    --temp-line:rgba(144,133,233,0.55);
+    --grid:#232a37;
+    --axis:#39414f;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--bg);
+    color:var(--text-primary);
+    font-family:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion:no-preference){ .fade-up{ animation:fadeUp .6s ease both; } }
+  @keyframes fadeUp{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+
+  .page{ max-width:1180px; margin:0 auto; padding:40px 24px 80px; display:flex; flex-direction:column; gap:28px; }
+
+  .topbar{ display:flex; justify-content:space-between; align-items:flex-end; gap:20px; flex-wrap:wrap; border-bottom:1px solid var(--border); padding-bottom:22px; }
+  .eyebrow{ font-family:"IBM Plex Sans Condensed", sans-serif; font-size:12.5px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .eyebrow .dot{ width:7px; height:7px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  h1{ font-size:clamp(28px,3.4vw,40px); line-height:1.12; letter-spacing:-0.01em; margin:0 0 8px; text-wrap:balance; font-weight:700; }
+  .subtitle{ color:var(--text-secondary); font-size:15px; max-width:66ch; line-height:1.55; margin:0; }
+  .meta-block{ text-align:right; font-family:"IBM Plex Mono", monospace; font-size:12.5px; color:var(--text-muted); line-height:1.8; white-space:nowrap; }
+  .meta-block b{ color:var(--text-secondary); font-weight:500; }
+
+  /* legend key strip for the two operating bands */
+  .band-key{ display:flex; gap:18px; flex-wrap:wrap; font-size:12.5px; color:var(--text-secondary); }
+  .band-key .bk-item{ display:flex; align-items:center; gap:8px; }
+  .band-key .bk-swatch{ width:14px; height:14px; border-radius:4px; flex:none; }
+  .band-key b{ color:var(--text-primary); }
+
+  .hero{ display:grid; grid-template-columns:1.3fr 1fr; gap:1px; background:var(--border); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .hero > div{ background:var(--surface); padding:26px 28px; }
+  .hero-label{ font-family:"IBM Plex Sans Condensed"; font-size:11.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--critical); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .hero-text{ font-size:16px; line-height:1.65; color:var(--text-primary); max-width:58ch; }
+  .hero-text b{ color:var(--accent); font-weight:600; }
+  .hero-text .lo{ color:var(--flow); font-weight:600; }
+  .hero-note{ margin-top:14px; font-size:13px; color:var(--text-muted); line-height:1.6; }
+  .hero-figure{ display:flex; flex-direction:column; justify-content:center; align-items:flex-start; gap:6px; }
+  .hero-figure .lbl{ font-size:12.5px; color:var(--text-muted); }
+  .hero-num{ font-family:"IBM Plex Mono"; font-weight:600; font-size:38px; letter-spacing:-0.02em; color:var(--text-primary); display:flex; align-items:baseline; gap:10px; }
+  .hero-num .delta{ font-size:16px; color:var(--critical); font-weight:600; }
+  .z-chips{ display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+  .z-chip{ background:var(--critical-soft); border:1px solid rgba(217,75,75,0.35); border-radius:8px; padding:7px 11px; font-family:"IBM Plex Mono"; font-size:12px; color:#ff9b9b; }
+  .z-chip b{ color:#ffb3b3; }
+
+  .highlight-card{ border-color:rgba(217,75,75,0.3); background:linear-gradient(180deg, rgba(217,75,75,0.05), var(--surface) 40%); }
+  .highlight-stat{ display:flex; align-items:center; gap:20px; margin:14px 0 18px; padding:16px 18px; background:var(--surface-raised); border:1px solid var(--border-soft); border-radius:10px; flex-wrap:wrap; }
+  .hs-num{ font-family:"IBM Plex Mono"; font-size:42px; font-weight:700; color:var(--critical); display:flex; align-items:baseline; gap:8px; flex:none; }
+  .hs-unit{ font-size:14px; font-weight:500; color:var(--text-muted); }
+  .hs-desc{ font-size:13.5px; color:var(--text-secondary); line-height:1.6; flex:1; min-width:240px; }
+  .hs-desc b{ color:#ff9b9b; }
+  .stack-row{ display:flex; align-items:center; gap:14px; margin-bottom:10px; }
+  .stack-label{ width:56px; flex:none; font-family:"IBM Plex Mono"; font-size:12.5px; color:var(--text-secondary); }
+  .stack-track{ flex:1; height:34px; border-radius:6px; overflow:hidden; display:flex; background:var(--surface-raised); border:1px solid var(--border-soft); }
+  .stack-seg{ height:100%; display:flex; align-items:center; justify-content:center; font-family:"IBM Plex Mono"; font-size:11px; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; position:relative; }
+  .stack-seg.s300{ background:var(--flow); }
+  .stack-seg.s380{ background:var(--cool); }
+  .stack-seg.s400{ background:var(--critical); }
+  .stack-legend{ display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--text-secondary); margin-top:8px; }
+
+  .kpi-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .kpi{ background:var(--surface); padding:18px 20px; display:flex; flex-direction:column; gap:8px; }
+  .kpi .lbl{ font-size:12px; color:var(--text-muted); line-height:1.4; }
+  .kpi .val{ font-family:"IBM Plex Mono"; font-size:22px; font-weight:600; color:var(--text-primary); letter-spacing:-0.01em; }
+  .kpi .val.accent{ color:var(--accent); }
+  .kpi .val.flow{ color:var(--flow); }
+  .kpi .val.crit{ color:#ff8f8f; }
+  .kpi .sub{ font-size:11.5px; color:var(--text-muted); font-family:"IBM Plex Mono"; }
+
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px 26px 20px; }
+  .card-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:6px; flex-wrap:wrap; }
+  .card-title{ font-size:16.5px; font-weight:600; margin:0 0 4px; }
+  .card-desc{ font-size:13px; color:var(--text-secondary); margin:0; max-width:64ch; line-height:1.55; }
+  .legend{ display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--text-secondary); align-items:center; }
+  .legend-item{ display:flex; align-items:center; gap:6px; white-space:nowrap; }
+  .swatch{ width:10px; height:10px; border-radius:2px; flex:none; }
+  .swatch.line{ width:14px; height:2px; border-radius:1px; }
+
+  /* filter toolbar */
+  .toolbar{ display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 4px; }
+  .filter-btn{
+    font-family:"IBM Plex Sans Condensed"; font-size:12.5px; font-weight:600; letter-spacing:.02em;
+    padding:7px 13px; border-radius:20px; border:1px solid var(--border); background:var(--surface-raised);
+    color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; gap:7px; transition:all .12s ease;
+  }
+  .filter-btn:hover{ background:var(--surface-hover); color:var(--text-primary); }
+  .filter-btn .fdot{ width:7px; height:7px; border-radius:50%; }
+  .filter-btn.active{ background:var(--accent-soft); border-color:rgba(255,157,46,0.4); color:var(--accent); }
+  .filter-btn .count{ color:var(--text-muted); font-weight:500; }
+  .filter-btn.active .count{ color:var(--accent); }
+
+  .chart-wrap{ margin-top:14px; }
+  svg.chart{ width:100%; height:auto; display:block; overflow:visible; font-family:"IBM Plex Mono"; }
+  .axis-label{ fill:var(--text-muted); font-size:10.5px; }
+  .grid-line{ stroke:var(--grid); stroke-width:1; }
+  .thresh-line{ stroke:var(--cool); stroke-width:1.3; stroke-dasharray:4 4; opacity:.8; }
+  .thresh-line.lo{ stroke:var(--flow); }
+  .thresh-label{ fill:var(--cool); font-size:10px; font-weight:600; }
+  .steady-band{ fill:var(--flow-soft); }
+  .cool-band{ fill:var(--cool-soft); }
+  .abn-band{ fill:var(--critical-band); }
+  .abn-label{ fill:#ff9b9b; font-size:10.5px; font-weight:600; font-family:"IBM Plex Sans Condensed"; }
+  .mean-line{ fill:none; stroke:var(--flow); stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; transition:opacity .15s ease; }
+  .mean-dot{ fill:var(--bg); stroke:var(--flow); stroke-width:2.4; transition:opacity .15s ease, r .15s ease; cursor:pointer; }
+  .mean-dot.abnormal{ stroke:var(--critical); fill:var(--critical); }
+  .mean-dot.idle{ stroke:var(--idle); }
+  .whisker{ stroke:var(--flow-line); stroke-width:1.3; transition:opacity .15s ease; }
+  .whisker.abnormal{ stroke:rgba(217,75,75,0.55); }
+  .dimmed{ opacity:.16 !important; }
+
+  .area-fill{ fill:url(#areaGradient); }
+  .area-line{ fill:none; stroke:var(--flow); stroke-width:1.8; }
+  .idle-line{ fill:none; stroke:var(--idle); stroke-width:1.6; stroke-dasharray:3 3; }
+  .daybound{ stroke:var(--axis); stroke-width:1; stroke-dasharray:2 3; }
+  .seg-label{ fill:var(--text-muted); font-size:10px; text-anchor:middle; }
+  .seg-label.abnormal{ fill:#ff9b9b; font-weight:600; }
+  .temp-line{ fill:none; stroke:var(--temp); stroke-width:1.8; }
+  .temp-line.idle{ stroke-dasharray:3 3; opacity:.6; }
+  .temp-band-note{ fill:var(--text-muted); font-size:10.5px; }
+  .quench-stat-row{ display:flex; gap:14px; flex-wrap:wrap; margin:14px 0 18px; }
+  .qs-tile{ flex:1; min-width:150px; background:var(--surface-raised); border:1px solid var(--border-soft); border-radius:10px; padding:13px 15px; }
+  .qs-tile.abn{ border-color:rgba(217,75,75,0.3); }
+  .qs-label{ font-family:"IBM Plex Sans Condensed"; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
+  .qs-val{ font-family:"IBM Plex Mono"; font-size:20px; font-weight:600; color:var(--text-primary); }
+  .qs-val .z{ font-size:12px; font-weight:500; margin-left:6px; }
+  .qs-val .z.ok{ color:var(--good); }
+  .qs-sub{ font-size:11.5px; color:var(--text-secondary); margin-top:4px; }
+  .quench-verdict{ margin-top:14px; padding:14px 16px; background:var(--flow-soft); border:1px solid rgba(57,135,229,0.3); border-radius:10px; font-size:13.5px; line-height:1.65; color:var(--text-primary); }
+  .quench-verdict b{ color:#8fc0ff; }
+  .temp-sub-heading{ font-family:"IBM Plex Sans Condensed"; font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); margin:0 0 4px; padding-top:14px; border-top:1px solid var(--border-soft); }
+  .fault-mark{ fill:none; stroke:var(--idle); stroke-width:1.6; }
+
+  #tt{ position:absolute; pointer-events:none; z-index:5; background:var(--surface-raised); border:1px solid var(--border); border-radius:8px; padding:8px 11px; font-size:12px; font-family:"IBM Plex Mono"; color:var(--text-primary); box-shadow:0 8px 24px rgba(0,0,0,.4); opacity:0; transform:translate(-50%,-115%); transition:opacity .1s ease; white-space:nowrap; }
+  #tt .tt-title{ color:var(--text-muted); font-size:10.5px; margin-bottom:3px; }
+  .chart-rel{ position:relative; }
+
+  .bar{ transition:opacity .15s ease; cursor:pointer; }
+  .bar.abnormal{ fill:var(--critical); }
+  .bar.normal{ fill:var(--flow); }
+  .bar.none{ fill:var(--idle); opacity:.45; }
+  .bar-label{ fill:var(--text-secondary); font-size:11px; font-family:"IBM Plex Mono"; font-weight:500; text-anchor:middle; }
+  .cycle-note{ margin-top:14px; font-size:12.5px; color:var(--text-muted); line-height:1.6; background:var(--surface-raised); border:1px solid var(--border-soft); border-radius:8px; padding:10px 14px; }
+  .cycle-note b{ color:var(--text-secondary); }
+
+  .donut-row{ display:flex; gap:32px; align-items:center; flex-wrap:wrap; margin-top:10px; }
+  .donut-legend{ display:flex; flex-direction:column; gap:12px; min-width:240px; flex:1; }
+  .dl-item{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 12px; background:var(--surface-raised); border-radius:8px; border:1px solid var(--border-soft); }
+  .dl-left{ display:flex; align-items:center; gap:9px; font-size:13px; color:var(--text-primary); }
+  .dl-right{ font-family:"IBM Plex Mono"; font-size:13px; color:var(--text-secondary); text-align:right; }
+  .dl-right b{ color:var(--text-primary); font-weight:600; }
+
+  .table-scroll{ overflow-x:auto; margin-top:12px; border-radius:10px; border:1px solid var(--border-soft); }
+  table{ border-collapse:collapse; width:100%; min-width:980px; font-size:13px; }
+  thead th{ text-align:left; font-family:"IBM Plex Sans Condensed"; font-weight:600; letter-spacing:.04em; text-transform:uppercase; font-size:11px; color:var(--text-muted); background:var(--surface-raised); padding:10px 14px; border-bottom:1px solid var(--border); position:sticky; top:0; white-space:nowrap; }
+  th.sortable{ cursor:pointer; user-select:none; }
+  th.sortable:hover{ color:var(--text-secondary); }
+  th.sortable .arrow{ opacity:.35; margin-left:3px; }
+  th.sortable.active .arrow{ opacity:1; color:var(--accent); }
+  tbody td{ padding:10px 14px; border-bottom:1px solid var(--border-soft); color:var(--text-secondary); font-family:"IBM Plex Mono"; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  tbody td.name{ font-family:"IBM Plex Sans"; color:var(--text-primary); font-weight:500; }
+  tbody tr{ transition:opacity .15s ease; }
+  tbody tr.row-hidden{ display:none; }
+  tbody tr:hover td{ background:var(--surface-hover); }
+  .pill{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-family:"IBM Plex Sans Condensed"; font-size:11px; font-weight:600; letter-spacing:.03em; }
+  .pill.good{ background:var(--good-soft); color:#4ede4e; }
+  .pill.cool{ background:var(--cool-soft); color:var(--cool); }
+  .pill.crit{ background:var(--critical-soft); color:#ff8080; }
+  .pill.idle{ background:var(--idle-soft); color:var(--idle); }
+  .pill::before{ content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+  footer{ border-top:1px solid var(--border); padding-top:18px; font-size:12px; color:var(--text-muted); line-height:1.7; display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+  footer b{ color:var(--text-secondary); font-weight:500; }
+
+  @media (max-width:720px){
+    .hero{ grid-template-columns:1fr; }
+    .meta-block{ text-align:left; }
+    .topbar{ align-items:flex-start; }
+  }
+</style>
+
+<div class="page">
+
+  <div class="topbar fade-up">
+    <div>
+      <div class="eyebrow"><span class="dot"></span>Condition Monitoring &middot; Column R</div>
+      <h1>แนวโน้ม Oil Cooler Flow</h1>
+      <p class="subtitle">สรุปค่า <b style="color:var(--text-primary)">Oil cooler flow [L/min]</b> จากไฟล์บันทึกข้อมูล 13 ไฟล์ ระหว่าง 9 พ.ค. – 2 ส.ค. 2026 จำแนกตามช่วงการทำงานจริง (<b style="color:var(--flow)">200–300 L/min = Regulated (Control State)</b>, <b style="color:var(--cool)">300–400 L/min = Oil Cooling</b> เมื่ออุณหภูมิน้ำมันสูงขึ้น, <b style="color:var(--critical)">&gt;400 L/min = Abnormal</b>) และนับจำนวน/ระยะเวลาของแต่ละครั้งที่เกิด Abnormal เทียบรายวัน</p>
+    </div>
+    <div class="meta-block">
+      <div><b>13</b> เซสชันบันทึกข้อมูล</div>
+      <div><b>84,590</b> จุดข้อมูลทั้งหมด</div>
+      <div>สร้างรายงาน 25 ส.ค. 2026</div>
+    </div>
+  </div>
+
+  <div class="hero fade-up" style="animation-delay:.05s">
+    <div>
+      <div class="hero-label">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L1 21H23L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17.5" r="1.1" fill="currentColor"/></svg>
+        Abnormal (&gt;400 L/min) เกิดกี่ครั้ง/วัน นานกี่นาทีต่อครั้ง
+      </div>
+      <div class="hero-text">
+        Abnormal เกิดเฉพาะใน 3 เซสชันล่าสุด (30 ก.ค. – 1 ส.ค.) เท่านั้น — ไม่เคยเกิดเลยในเซสชันทำงานปกติก่อนหน้า ค่าสูงสุดที่พุ่งถึง <span class="lo">491.1–491.6 L/min</span> สูงกว่าค่าสูงสุดทั่วไปที่เคยบันทึกได้ (~350 L/min) อย่างชัดเจน โดยแต่ละ "ครั้ง" ของ Abnormal ยาวนานพอๆ กับรอบ Oil Cooling ปกติ (~6.5–8 นาที) เพียงแต่ความสูงของพีคเกิน 400 L/min ทุกรอบในเซสชันเหล่านี้
+      </div>
+      <div class="z-chips">
+        <div class="z-chip">30 ก.ค. &middot; <b>13 ครั้ง/วัน</b> &middot; เฉลี่ย 7.1 นาที/ครั้ง</div>
+        <div class="z-chip">31 ก.ค. &middot; <b>22 ครั้ง/วัน</b> &middot; เฉลี่ย 6.5 นาที/ครั้ง</div>
+        <div class="z-chip">1 ส.ค. &middot; <b>39 ครั้ง/วัน</b> &middot; เฉลี่ย 8.1 นาที/ครั้ง</div>
+      </div>
+      <div class="hero-note">อ้างอิงสถิติ: เทียบกับ baseline จาก 8 เซสชันทำงานปกติ (mean 229 ± 16, max 313 ± 60 L/min) เซสชันทั้ง 3 นี้เบี่ยงเบนออกนอกช่วงปกติชัดเจนทางสถิติเช่นกัน (z-score สูงสุดถึง +3.7) เซสชัน 27 และ 29 ก.ค. เข้าลักษณะเครื่องหยุดเดิน/บำรุงรักษา จึงคัดออกจากการคำนวณ baseline</div>
+    </div>
+    <div class="hero-figure">
+      <span class="lbl">รวม Abnormal ทั้งหมดที่ตรวจพบ</span>
+      <div class="hero-num">74<span style="font-size:16px;color:var(--text-muted)">ครั้ง</span><span class="delta">ใน 3 วัน</span></div>
+      <div class="lbl" style="margin-top:2px">เฉลี่ย 7.5 นาที/ครั้ง &middot; ไม่เคยเกิดก่อนหน้านี้เลย</div>
+    </div>
+  </div>
+
+  <div class="card highlight-card fade-up" style="animation-delay:.08s">
+    <div class="card-head">
+      <div>
+        <p class="card-title">ในช่วง Abnormal — มีบางรอบที่กลับมาแค่ 300–380 L/min (ปกติ) บ้างไหม?</p>
+        <p class="card-desc">แยกเวลาที่ค่าไหลเกิน 300 L/min ในแต่ละวันของช่วง Abnormal ว่าไปสุดที่ช่วงไหน: 300–380 (ยังถือว่าปกติ), 380–400 (คาบเส้น), หรือทะลุ 400 (Abnormal จริง)</p>
+      </div>
+    </div>
+    <div class="highlight-stat">
+      <div class="hs-num">0<span class="hs-unit">จาก 74 รอบ</span></div>
+      <div class="hs-desc">ไม่มีรอบ Cool down รอบไหนเลยที่พีคสูงสุดหยุดอยู่ในช่วง 300–380 L/min — <b>ทุกรอบทะลุ 400 L/min</b> ค่าที่อยู่ในช่วง 300–380 มีจริงแต่เป็นเพียงจุดผ่านตอนไต่ขึ้น/ลงเท่านั้น (&lt;1.5% ของเวลาที่ไหลเกิน 300)</div>
+    </div>
+    <div class="chart-wrap chart-rel" id="chartBands"></div>
+  </div>
+
+  <div class="kpi-row fade-up" style="animation-delay:.1s" id="kpiRow"></div>
+
+  <div class="card fade-up" style="animation-delay:.15s">
+    <div class="card-head">
+      <div>
+        <p class="card-title">เทรนด์ค่าเฉลี่ยรายเซสชัน — เส้นแนวนอนตามวันที่จริง</p>
+        <p class="card-desc">แต่ละจุดคือค่าเฉลี่ย 1 เซสชัน เส้นขีดแนวตั้งคือช่วง Min–Max พื้นหลังสีฟ้าคือช่วง <b style="color:var(--flow)">Regulated (Control State) 200–300 L/min</b> พื้นหลังสีเหลืองคือช่วง <b style="color:var(--cool)">Oil Cooling 300–400 L/min</b> พื้นหลังสีแดงอ่อนคือช่วง <b style="color:var(--critical)">Abnormal &gt;400 L/min</b> แถบไฮไลท์สีแดงคือเซสชันที่ตรวจพบ Abnormal ใช้ปุ่มด้านล่างเพื่อกรองเฉพาะกลุ่มที่สนใจ</p>
+      </div>
+    </div>
+    <div class="toolbar" id="filterToolbar"></div>
+    <div class="chart-wrap chart-rel" id="chartSessions"></div>
+  </div>
+
+  <div class="card fade-up" style="animation-delay:.2s">
+    <div class="card-head">
+      <div>
+        <p class="card-title">ระยะโฟกัส: 26 ก.ค. – 2 ส.ค. (รวมช่วงก่อนและระหว่าง Abnormal)</p>
+        <p class="card-desc">เทียบเซสชันทำงานปกติ (26 ก.ค.) กับเซสชันที่ตรวจพบ Abnormal (30 ก.ค. – 1 ส.ค.) แบบต่อเนื่องตามเวลาจริง เส้นประสีเทาคือช่วงเครื่องหยุด/บำรุงรักษา (27, 29 ก.ค.) แถบสีแดงคือช่วงที่เกิด Abnormal</p>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><span class="swatch line" style="background:var(--flow)"></span>Regulated / Oil Cooling</span>
+        <span class="legend-item"><span class="swatch line" style="background:var(--idle)"></span>หยุด/บำรุงรักษา</span>
+        <span class="legend-item"><span class="swatch" style="background:var(--critical-band);border:1px solid rgba(217,75,75,.4)"></span>Abnormal</span>
+      </div>
+    </div>
+    <div class="chart-wrap chart-rel" id="chartWindow"></div>
+  </div>
+
+  <div class="card fade-up" style="animation-delay:.21s">
+    <div class="card-head">
+      <div>
+        <p class="card-title">Flow ผิดปกติ ทำให้อุณหภูมิน้ำมัน Quench สูงขึ้นด้วยหรือไม่?</p>
+        <p class="card-desc">เทียบ <b style="color:var(--flow)">Oil cooler flow</b> (คอลัมน์ R) กับ <b style="color:var(--temp)">Quench tank Temp</b> (คอลัมน์ J) แบบ panel ซ้อนกันบนแกนเวลาเดียวกัน ตลอดทั้ง 13 เซสชัน ตั้งแต่ 9 พ.ค. ถึง 1 ส.ค. baseline อุณหภูมิ (เส้นประม่วง) คำนวณจาก 7 เซสชันทำงานปกติที่ค่าน่าเชื่อถือ — คัดออก 26/27/29 ก.ค. เพราะเซนเซอร์อ่านค่าผิดปกติ (~36°C / ติดลบ ระหว่างเครื่องหยุด/เริ่มเดินเครื่องเย็น ทำเครื่องหมาย <span style="color:var(--idle)">◇</span> ไว้ให้เห็นชัด)</p>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><span class="swatch line" style="background:var(--flow)"></span>Flow (เฉลี่ย/min–max)</span>
+        <span class="legend-item"><span class="swatch line" style="background:var(--temp)"></span>Quench Temp</span>
+        <span class="legend-item"><span class="swatch" style="background:var(--critical)"></span>Abnormal</span>
+        <span class="legend-item"><span class="swatch" style="background:var(--idle)"></span>เซนเซอร์ผิดปกติ</span>
+      </div>
+    </div>
+    <p class="temp-sub-heading">ภาพรวมทั้งหมด — ทุกเซสชัน 9 พ.ค. – 1 ส.ค. (แต่ละจุดคือ 1 เซสชัน)</p>
+    <div class="chart-wrap chart-rel" id="chartFlowFull"></div>
+    <div class="chart-wrap chart-rel" id="chartTempFull" style="margin-top:6px"></div>
+
+    <p class="temp-sub-heading" style="margin-top:22px">ซูมช่วงวิกฤต — 26 ก.ค. – 2 ส.ค. แบบต่อเนื่องทุก ~10 นาที</p>
+    <div class="chart-wrap chart-rel" id="chartFlowPanel"></div>
+    <div class="chart-wrap chart-rel" id="chartTempPanel" style="margin-top:6px"></div>
+    <div class="quench-stat-row" id="quenchStatRow"></div>
+    <div class="quench-verdict" id="quenchVerdict"></div>
+  </div>
+
+  <div class="card fade-up" style="animation-delay:.22s">
+    <div class="card-head">
+      <div>
+        <p class="card-title">รอบ Oil Cooling (&gt;300 L/min) ต่อเซสชัน — กี่รอบ นานกี่วินาทีต่อรอบ</p>
+        <p class="card-desc">1 "รอบ" คือช่วงที่ค่าไหลต่อเนื่องเกิน 300 L/min แล้วลดกลับลงมา (ข้อมูลบันทึกทุก 10 วินาที) แท่งสีแดงคือเซสชันที่ตรวจพบ Abnormal ชี้ที่แท่งเพื่อดูจำนวนรอบ ระยะเวลาเฉลี่ย/สั้นสุด/ยาวสุดต่อรอบ และจำนวนรอบที่พีคเกิน 400 L/min (Abnormal)</p>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><span class="swatch" style="background:var(--flow)"></span>Regulated / Oil Cooling</span>
+        <span class="legend-item"><span class="swatch" style="background:var(--critical)"></span>Abnormal</span>
+        <span class="legend-item"><span class="swatch" style="background:var(--idle)"></span>ไม่มีรอบ / หยุดเครื่อง</span>
+      </div>
+    </div>
+    <div class="chart-wrap chart-rel" id="chartCycles"></div>
+    <div class="cycle-note" id="cycleNote"></div>
+  </div>
+
+  <div class="card fade-up" style="animation-delay:.25s">
+    <div class="card-head">
+      <div>
+        <p class="card-title">สัดส่วนช่วงการทำงาน ตามคำจำกัดความจริง</p>
+        <p class="card-desc">รวมทุกจุดข้อมูล (84,590 จุด) จาก 13 เซสชัน แบ่งตามช่วงค่า: ต่ำกว่า 200 (ต่ำกว่า Regulated / รวมช่วงหยุดเครื่อง), 200–300 (Regulated), 300–400 (Oil Cooling), และสูงกว่า 400 L/min (Abnormal)</p>
+      </div>
+    </div>
+    <div class="donut-row" id="donutRow"></div>
+  </div>
+
+  <div class="card fade-up" style="animation-delay:.3s">
+    <div class="card-head">
+      <div>
+        <p class="card-title">เปรียบเทียบ Max / Min / Avg รายวัน</p>
+        <p class="card-desc">คลิกหัวคอลัมน์ Min / Mean / Max เพื่อเรียงลำดับเทียบรายวัน หรือใช้ปุ่มกรองด้านบนเพื่อดูเฉพาะกลุ่มที่สนใจ</p>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>เซสชัน</th><th>ช่วงเวลา</th><th>ระยะเวลา</th><th>จุดข้อมูล</th>
+            <th class="sortable" data-key="min">Min <span class="arrow">▾</span></th>
+            <th class="sortable" data-key="mean">Mean <span class="arrow">▾</span></th>
+            <th class="sortable" data-key="max">Max <span class="arrow">▾</span></th>
+            <th>% Oil Cooling</th><th class="sortable" data-key="n_cycles_abn">Abnormal (ครั้ง) <span class="arrow">▾</span></th><th>สถานะ</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>
+    <div>แหล่งข้อมูล: 13 ไฟล์ data logger (.csv) &middot; คอลัมน์ที่ใช้: <b>Oil cooler flow [L/M]</b> (คอลัมน์ R) และ <b>Quench tank Temp [&deg;]</b> (คอลัมน์ J) &middot; ค่าที่ไม่ใช่ตัวเลข (เช่น BURNOUT) คัดออกจากการคำนวณ &middot; เซสชัน 26/27/29 ก.ค. คัดออกจาก baseline อุณหภูมิเนื่องจากค่าที่บันทึกผิดปกติ (ติดลบ/~36&deg;C) ระหว่างเครื่องหยุด/เริ่มเดินเครื่องเย็น</div>
+    <div>เกณฑ์ช่วงการทำงาน: 200–300 = Regulated (Control State), 300–400 = Oil Cooling, &gt;400 = Abnormal (นิยามจากผู้ใช้งาน) &middot; 1 "ครั้ง/รอบ" ของ Abnormal คือช่วงที่ค่าไหลต่อเนื่องเกิน 400 L/min แล้วลดกลับลงมา &middot; ตรวจสอบเทียบสถิติเพิ่มเติมด้วย z-score เฉลี่ย/สูงสุด เทียบ baseline 8 เซสชันทำงานปกติ (9 พ.ค. – 26 ก.ค.)</div>
+  </footer>
+
+</div>
+
+<div id="tt"></div>
+
+<script>
+const DATA = {"sessions":[{"file":"58269302-DATA20260509_211540_0109_00000023_000009.csv","label":"09 May","start":"2026-05-09T21:15:40","end":"2026-05-10T21:15:30","duration_h":24.0,"n":8640,"min":208.8,"max":343.6,"mean":232.3,"pct_below":0.0,"pct_regulated":84.1,"pct_cooling":15.9,"pct_abnormal":0.0,"n_cycles":28,"avg_dur_s":490.4,"min_dur_s":420.0,"max_dur_s":540.0,"total_dur_s":13730.0,"n_cycles_abn":0,"avg_dur_abn_s":0,"min_dur_abn_s":0,"max_dur_abn_s":0,"total_dur_abn_s":0,"z_avg":0.21,"z_max":0.5,"is_idle":false,"abnormal":false},{"file":"b35256ce-DATA20260525_211540_0109_00000023_000025.csv","label":"25 May","start":"2026-05-25T21:15:40","end":"2026-05-26T21:15:30","duration_h":24.0,"n":8640,"min":208.8,"max":344.1,"mean":241.4,"pct_below":0.0,"pct_regulated":77.3,"pct_cooling":22.7,"pct_abnormal":0.0,"n_cycles":40,"avg_dur_s":491.2,"min_dur_s":430.0,"max_dur_s":590.0,"total_dur_s":19650.0,"n_cycles_abn":0,"avg_dur_abn_s":0,"min_dur_abn_s":0,"max_dur_abn_s":0,"total_dur_abn_s":0,"z_avg":0.79,"z_max":0.51,"is_idle":false,"abnormal":false},{"file":"d75ee8e7-DATA20260613_175732_0109_00000027_000001.csv","label":"13 Jun","start":"2026-06-13T17:57:32","end":"2026-06-13T18:16:12","duration_h":0.31,"n":113,"min":202.7,"max":213.1,"mean":210.4,"pct_below":0.0,"pct_regulated":100.0,"pct_cooling":0.0,"pct_abnormal":0.0,"n_cycles":0,"avg_dur_s":0,"min_dur_s":0,"max_dur_s":0,"total_dur_s":0,"n_cycles_abn":0,"avg_dur_abn_s":0,"min_dur_abn_s":0,"max_dur_abn_s":0,"total_dur_abn_s":0,"z_avg":-1.2,"z_max":-1.67,"is_idle":false,"abnormal":false},{"file":"e313f0e1-DATA20260622_181735_0109_00000028_000010.csv","label":"22 Jun","start":"2026-06-22T18:17:35","end":"2026-06-23T18:17:25","duration_h":24.0,"n":8640,"min":213.2,"max":351.3,"mean":245.1,"pct_below":0.0,"pct_regulated":78.4,"pct_cooling":21.6,"pct_abnormal":0.0,"n_cycles":37,"avg_dur_s":505.1,"min_dur_s":360.0,"max_dur_s":670.0,"total_dur_s":18690.0,"n_cycles_abn":0,"avg_dur_abn_s":0,"min_dur_abn_s":0,"max_dur_abn_s":0,"total_dur_abn_s":0,"z_avg":1.03,"z_max":0.63,"is_idle":false,"abnormal":false},{"file":"8f2afe79-DATA20260702_181735_0109_00000028_000020.csv","label":"02 Jul","start":"2026-07-02T18:17:35","end":"2026-07-03T18:17:25","duration_h":24.0,"n":8640,"min":211.8,"max":348.0,"mean":245.3,"pct_below":0.0,"pct_regulated":76.5,"pct_cooling":23.5,"pct_abnormal":0.0,"n_cycles":40,"avg_dur_s":507.2,"min_dur_s":340.0,"max_dur_s":740.0,"total_dur_s":20290.0,"n_cycles_abn":0,"avg_dur_abn_s":0,"min_dur_abn_s":0,"max_dur_abn_s":0,"total_dur_abn_s":0,"z_avg":1.05,"z_max":0.58,"is_idle":false,"abnormal":false},{"file":"63f7a577-DATA20260711_094054_0109_00000030_000001.csv","label":"11 Jul","start":"2026-07-11T09:40:54","end":"2026-07-12T09:40:44","duration_h":24.0,"n":8640,"min":0.0,"max":349.3,"mean":216.2,"pct_below":0.1,"pct_regulated":96.8,"pct_cooling":3.1,"pct_abnormal":0.0,"n_cycles":6,"avg_dur_s":445.0,"min_dur_s":440.0,"max_dur_s":460.0,"total_dur_s":2670.0,"n_cycles_abn":0,"avg_dur_abn_s":0,"min_dur_abn_s":0,"max_dur_abn_s":0,"total_dur_abn_s":0,"z_avg":-0.83,"z_max":0.6,"is_idle":false,"abnormal":false},{"file":"4ee0cd5b-DATA20260718_094054_0109_00000030_000008.csv","label":"18 Jul","start":"2026-07-18T09:40:54","end":"2026-07-19T09:40:44","duration_h":24.0,"n":8640,"min":207.5,"max":351.6,"mean":238.2,"pct_below":0.0,"pct_regulated":82.8,"pct_cooling":17.2,"pct_abnormal":0.0,"n_cycles":29,"avg_dur_s":511.4,"min_dur_s":460.0,"max_dur_s":670.0,"total_dur_s":14830.0,"n_cycles_abn":0,"avg_dur_abn_s":0,"min_dur_abn_s":0,"max_dur_abn_s":0,"total_dur_abn_s":0,"z_avg":0.59,"z_max":0.64,"is_idle":false,"abnormal":false},{"file":"0012e092-DATA20260726_094054_0109_00000030_000016.csv","label":"26 Jul","start":"2026-07-26T09:40:54","end":"2026-07-26T20:05:14","duration_h":10.41,"n":3747,"min":200.8,"max":206.3,"mean":203.6,"pct_below":0.0,"pct_regulated":100.0,"pct_cooling":0.0,"pct_abnormal":0.0,"n_cycles":0,"avg_dur_s":0,"min_dur_s":0,"max_dur_s":0,"total_dur_s":0,"n_cycles_abn":0,"avg_dur_abn_s":0,"min_dur_abn_s":0,"max_dur_abn_s":0,"total_dur_abn_s":0,"z_avg":-1.64,"z_max":-1.79,"is_idle":false,"abnormal":false},{"file":"c9af2980-DATA20260727_084256_0109_00000033_000001.csv","label":"27 Jul","start":"2026-07-27T08:42:56","end":"2026-07-27T16:52:46","duration_h":8.16,"n":2940,"min":-0.1,"max":31.7,"mean":0.1,"pct_below":100.0,"pct_regulated":0.0,"pct_cooling":0.0,"pct_abnormal":0.0,"n_cycles":0,"avg_dur_s":0,"min_dur_s":0,"max_dur_s":0,"total_dur_s":0,"n_cycles_abn":0,"avg_dur_abn_s":0,"min_dur_abn_s":0,"max_dur_abn_s":0,"total_dur_abn_s":0,"z_avg":null,"z_max":null,"is_idle":true,"abnormal":false},{"file":"52a31f0c-DATA20260729_093647_0109_00000034_000001.csv","label":"29 Jul","start":"2026-07-29T09:36:47","end":"2026-07-29T09:41:37","duration_h":0.08,"n":30,"min":-25.0,"max":-25.0,"mean":-25.0,"pct_below":100.0,"pct_regulated":0.0,"pct_cooling":0.0,"pct_abnormal":0.0,"n_cycles":0,"avg_dur_s":0,"min_dur_s":0,"max_dur_s":0,"total_dur_s":0,"n_cycles_abn":0,"avg_dur_abn_s":0,"min_dur_abn_s":0,"max_dur_abn_s":0,"total_dur_abn_s":0,"z_avg":null,"z_max":null,"is_idle":true,"abnormal":false},{"file":"e09dd678-DATA20260730_181322_0109_00000038_000002.csv","label":"30 Jul","start":"2026-07-30T18:13:22","end":"2026-07-31T18:13:12","duration_h":24.0,"n":8640,"min":231.1,"max":491.1,"mean":251.5,"pct_below":0.0,"pct_regulated":93.4,"pct_cooling":0.2,"pct_abnormal":6.4,"n_cycles":13,"avg_dur_s":435.4,"min_dur_s":360.0,"max_dur_s":450.0,"total_dur_s":5660.0,"n_cycles_abn":13,"avg_dur_abn_s":425.4,"min_dur_abn_s":350.0,"max_dur_abn_s":440.0,"total_dur_abn_s":5530.0,"z_avg":1.44,"z_max":2.96,"is_idle":false,"abnormal":true},{"file":"ef73b652-DATA20260731_181322_0109_00000038_000003.csv","label":"31 Jul","start":"2026-07-31T18:13:22","end":"2026-08-01T18:13:12","duration_h":24.0,"n":8640,"min":0.0,"max":491.6,"mean":259.8,"pct_below":0.3,"pct_regulated":89.5,"pct_cooling":0.2,"pct_abnormal":10.0,"n_cycles":22,"avg_dur_s":400.0,"min_dur_s":30.0,"max_dur_s":670.0,"total_dur_s":8800.0,"n_cycles_abn":22,"avg_dur_abn_s":392.7,"min_dur_abn_s":20.0,"max_dur_abn_s":660.0,"total_dur_abn_s":8640.0,"z_avg":1.98,"z_max":2.97,"is_idle":false,"abnormal":true},{"file":"4cfe21fb-DATA20260801_181322_0109_00000038_000004.csv","label":"01 Aug","start":"2026-08-01T18:13:22","end":"2026-08-02T18:13:12","duration_h":24.0,"n":8640,"min":231.3,"max":471.3,"mean":286.4,"pct_below":0.0,"pct_regulated":77.7,"pct_cooling":0.4,"pct_abnormal":21.9,"n_cycles":39,"avg_dur_s":494.9,"min_dur_s":410.0,"max_dur_s":720.0,"total_dur_s":19300.0,"n_cycles_abn":39,"avg_dur_abn_s":485.6,"min_dur_abn_s":400.0,"max_dur_abn_s":710.0,"total_dur_abn_s":18940.0,"z_avg":3.69,"z_max":2.63,"is_idle":false,"abnormal":true}],"baseline":{"mu_avg":229.1,"sd_avg":15.5,"mu_max":313.4,"sd_max":60.0,"n":8,"labels":["09 May","25 May","13 Jun","22 Jun","02 Jul","11 Jul","18 Jul","26 Jul"]},"distribution":{"total":84590,"below":3005,"regulated":69223,"cooling":9051,"abnormal":3311},"extended_window":[{"label":"26 Jul","start":"2026-07-26T09:40:54","end":"2026-07-26T20:05:14","abnormal":false,"is_idle":false,"mean":203.6,"max":206.3,"points":[{"t":"2026-07-26T09:40:00","mean":203.5,"min":201.2,"max":205.2},{"t":"2026-07-26T09:50:00","mean":203.1,"min":201.3,"max":204.8},{"t":"2026-07-26T10:00:00","mean":203.2,"min":201.2,"max":205.8},{"t":"2026-07-26T10:10:00","mean":203.3,"min":201.8,"max":205.0},{"t":"2026-07-26T10:20:00","mean":203.6,"min":202.2,"max":205.7},{"t":"2026-07-26T10:30:00","mean":203.4,"min":200.8,"max":205.5},{"t":"2026-07-26T10:40:00","mean":203.3,"min":201.3,"max":204.7},{"t":"2026-07-26T10:50:00","mean":203.3,"min":201.7,"max":204.7},{"t":"2026-07-26T11:00:00","mean":203.4,"min":201.6,"max":205.3},{"t":"2026-07-26T11:10:00","mean":203.1,"min":201.5,"max":204.5},{"t":"2026-07-26T11:20:00","mean":203.3,"min":201.6,"max":204.8},{"t":"2026-07-26T11:30:00","mean":203.4,"min":201.8,"max":204.7},{"t":"2026-07-26T11:40:00","mean":203.4,"min":201.6,"max":205.3},{"t":"2026-07-26T11:50:00","mean":203.4,"min":201.6,"max":205.5},{"t":"2026-07-26T12:00:00","mean":203.3,"min":201.8,"max":204.5},{"t":"2026-07-26T12:10:00","mean":203.5,"min":202.2,"max":205.0},{"t":"2026-07-26T12:20:00","mean":203.3,"min":202.1,"max":205.0},{"t":"2026-07-26T12:30:00","mean":203.4,"min":202.0,"max":205.5},{"t":"2026-07-26T12:40:00","mean":203.5,"min":202.2,"max":205.1},{"t":"2026-07-26T12:50:00","mean":203.3,"min":201.5,"max":204.7},{"t":"2026-07-26T13:00:00","mean":203.3,"min":201.8,"max":204.6},{"t":"2026-07-26T13:10:00","mean":203.3,"min":201.6,"max":204.7},{"t":"2026-07-26T13:20:00","mean":203.2,"min":202.1,"max":205.5},{"t":"2026-07-26T13:30:00","mean":203.5,"min":202.0,"max":205.5},{"t":"2026-07-26T13:40:00","mean":203.6,"min":201.7,"max":205.3},{"t":"2026-07-26T13:50:00","mean":203.8,"min":202.3,"max":205.3},{"t":"2026-07-26T14:00:00","mean":203.6,"min":201.8,"max":205.6},{"t":"2026-07-26T14:10:00","mean":203.8,"min":202.1,"max":205.8},{"t":"2026-07-26T14:20:00","mean":203.8,"min":201.8,"max":205.8},{"t":"2026-07-26T14:30:00","mean":203.8,"min":202.3,"max":206.2},{"t":"2026-07-26T14:40:00","mean":203.8,"min":201.6,"max":205.7},{"t":"2026-07-26T14:50:00","mean":203.9,"min":202.1,"max":205.7},{"t":"2026-07-26T15:00:00","mean":203.8,"min":202.3,"max":205.3},{"t":"2026-07-26T15:10:00","mean":203.8,"min":202.1,"max":205.8},{"t":"2026-07-26T15:20:00","mean":203.5,"min":201.8,"max":205.2},{"t":"2026-07-26T15:30:00","mean":203.8,"min":202.2,"max":205.5},{"t":"2026-07-26T15:40:00","mean":203.7,"min":201.6,"max":205.0},{"t":"2026-07-26T15:50:00","mean":203.9,"min":202.3,"max":205.7},{"t":"2026-07-26T16:00:00","mean":203.8,"min":202.2,"max":205.6},{"t":"2026-07-26T16:10:00","mean":203.6,"min":202.0,"max":205.5},{"t":"2026-07-26T16:20:00","mean":203.8,"min":202.5,"max":205.3},{"t":"2026-07-26T16:30:00","mean":203.8,"min":201.3,"max":205.7},{"t":"2026-07-26T16:40:00","mean":203.9,"min":202.6,"max":205.1},{"t":"2026-07-26T16:50:00","mean":204.2,"min":202.3,"max":206.2},{"t":"2026-07-26T17:00:00","mean":203.9,"min":202.1,"max":206.0},{"t":"2026-07-26T17:10:00","mean":204.0,"min":202.7,"max":205.5},{"t":"2026-07-26T17:20:00","mean":203.9,"min":202.1,"max":205.8},{"t":"2026-07-26T17:30:00","mean":203.7,"min":202.5,"max":205.5},{"t":"2026-07-26T17:40:00","mean":203.8,"min":202.6,"max":205.5},{"t":"2026-07-26T17:50:00","mean":204.0,"min":202.3,"max":206.3},{"t":"2026-07-26T18:00:00","mean":203.9,"min":202.1,"max":205.2},{"t":"2026-07-26T18:10:00","mean":203.8,"min":202.2,"max":205.2},{"t":"2026-07-26T18:20:00","mean":203.8,"min":201.7,"max":205.6},{"t":"2026-07-26T18:30:00","mean":203.7,"min":201.6,"max":205.7},{"t":"2026-07-26T18:40:00","mean":203.6,"min":202.1,"max":205.1},{"t":"2026-07-26T18:50:00","mean":203.6,"min":201.6,"max":205.5},{"t":"2026-07-26T19:00:00","mean":203.8,"min":202.3,"max":205.6},{"t":"2026-07-26T19:10:00","mean":203.8,"min":202.1,"max":205.0},{"t":"2026-07-26T19:20:00","mean":203.7,"min":202.2,"max":205.6},{"t":"2026-07-26T19:30:00","mean":203.8,"min":202.3,"max":205.2},{"t":"2026-07-26T19:40:00","mean":203.7,"min":202.1,"max":205.2},{"t":"2026-07-26T19:50:00","mean":203.5,"min":202.1,"max":205.0},{"t":"2026-07-26T20:00:00","mean":203.7,"min":201.7,"max":205.1}]},{"label":"27 Jul","start":"2026-07-27T08:42:56","end":"2026-07-27T16:52:46","abnormal":false,"is_idle":true,"mean":0.1,"max":31.7,"points":[{"t":"2026-07-27T08:40:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T08:50:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T09:00:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T09:10:00","mean":0.0,"min":-0.1,"max":0.2},{"t":"2026-07-27T09:20:00","mean":0.0,"min":0.0,"max":0.1},{"t":"2026-07-27T09:30:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T09:40:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T09:50:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T10:00:00","mean":0.0,"min":0.0,"max":0.1},{"t":"2026-07-27T10:10:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T10:20:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T10:30:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T10:40:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T10:50:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T11:00:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T11:10:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T11:20:00","mean":1.2,"min":-0.1,"max":31.7},{"t":"2026-07-27T11:30:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T11:40:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T11:50:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T12:00:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T12:10:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T12:20:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T12:30:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T12:40:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T12:50:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T13:00:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T13:10:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T13:20:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T13:30:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T13:40:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T13:50:00","mean":0.0,"min":-0.1,"max":0.2},{"t":"2026-07-27T14:00:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T14:10:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T14:20:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T14:30:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T14:40:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T14:50:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T15:00:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T15:10:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T15:20:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T15:30:00","mean":0.1,"min":-0.1,"max":7.0},{"t":"2026-07-27T15:40:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T15:50:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T16:00:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T16:10:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T16:20:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T16:30:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T16:40:00","mean":0.0,"min":-0.1,"max":0.1},{"t":"2026-07-27T16:50:00","mean":0.0,"min":0.0,"max":0.1}]},{"label":"29 Jul","start":"2026-07-29T09:36:47","end":"2026-07-29T09:41:37","abnormal":false,"is_idle":true,"mean":-25.0,"max":-25.0,"points":[{"t":"2026-07-29T09:36:00","mean":-25.0,"min":-25.0,"max":-25.0},{"t":"2026-07-29T09:38:00","mean":-25.0,"min":-25.0,"max":-25.0},{"t":"2026-07-29T09:40:00","mean":-25.0,"min":-25.0,"max":-25.0}]},{"label":"30 Jul","start":"2026-07-30T18:13:22","end":"2026-07-31T18:13:12","abnormal":true,"is_idle":false,"mean":251.5,"max":491.1,"points":[{"t":"2026-07-30T18:10:00","mean":233.9,"min":232.0,"max":235.6},{"t":"2026-07-30T18:20:00","mean":233.9,"min":231.7,"max":235.5},{"t":"2026-07-30T18:30:00","mean":233.7,"min":231.8,"max":235.5},{"t":"2026-07-30T18:40:00","mean":233.9,"min":232.1,"max":236.5},{"t":"2026-07-30T18:50:00","mean":233.8,"min":232.0,"max":235.2},{"t":"2026-07-30T19:00:00","mean":370.3,"min":232.1,"max":489.3},{"t":"2026-07-30T19:10:00","mean":286.4,"min":233.6,"max":489.6},{"t":"2026-07-30T19:20:00","mean":234.2,"min":232.5,"max":235.7},{"t":"2026-07-30T19:30:00","mean":234.3,"min":232.1,"max":236.3},{"t":"2026-07-30T19:40:00","mean":234.0,"min":232.2,"max":236.5},{"t":"2026-07-30T19:50:00","mean":234.1,"min":232.2,"max":236.1},{"t":"2026-07-30T20:00:00","mean":233.9,"min":231.7,"max":235.8},{"t":"2026-07-30T20:10:00","mean":234.0,"min":231.6,"max":235.6},{"t":"2026-07-30T20:20:00","mean":234.1,"min":232.1,"max":235.8},{"t":"2026-07-30T20:30:00","mean":234.0,"min":232.0,"max":236.0},{"t":"2026-07-30T20:40:00","mean":234.1,"min":231.5,"max":236.0},{"t":"2026-07-30T20:50:00","mean":253.2,"min":232.1,"max":476.6},{"t":"2026-07-30T21:00:00","mean":400.5,"min":238.2,"max":489.7},{"t":"2026-07-30T21:10:00","mean":235.1,"min":231.7,"max":239.8},{"t":"2026-07-30T21:20:00","mean":234.1,"min":232.0,"max":235.8},{"t":"2026-07-30T21:30:00","mean":234.1,"min":232.0,"max":236.2},{"t":"2026-07-30T21:40:00","mean":234.1,"min":232.2,"max":236.5},{"t":"2026-07-30T21:50:00","mean":234.1,"min":232.6,"max":236.2},{"t":"2026-07-30T22:00:00","mean":234.0,"min":232.0,"max":235.6},{"t":"2026-07-30T22:10:00","mean":233.7,"min":232.0,"max":235.6},{"t":"2026-07-30T22:20:00","mean":233.7,"min":232.3,"max":235.6},{"t":"2026-07-30T22:30:00","mean":233.8,"min":231.1,"max":235.5},{"t":"2026-07-30T22:40:00","mean":234.2,"min":232.1,"max":235.7},{"t":"2026-07-30T22:50:00","mean":418.0,"min":233.7,"max":490.2},{"t":"2026-07-30T23:00:00","mean":235.5,"min":232.3,"max":241.0},{"t":"2026-07-30T23:10:00","mean":234.3,"min":232.5,"max":236.3},{"t":"2026-07-30T23:20:00","mean":233.8,"min":232.2,"max":235.7},{"t":"2026-07-30T23:30:00","mean":234.0,"min":231.2,"max":236.1},{"t":"2026-07-30T23:40:00","mean":234.1,"min":232.1,"max":236.0},{"t":"2026-07-30T23:50:00","mean":234.2,"min":232.1,"max":236.0},{"t":"2026-07-31T00:00:00","mean":234.1,"min":232.7,"max":236.6},{"t":"2026-07-31T00:10:00","mean":234.1,"min":232.1,"max":235.6},{"t":"2026-07-31T00:20:00","mean":234.1,"min":232.1,"max":236.5},{"t":"2026-07-31T00:30:00","mean":234.0,"min":231.3,"max":236.1},{"t":"2026-07-31T00:40:00","mean":394.4,"min":232.7,"max":490.7},{"t":"2026-07-31T00:50:00","mean":255.2,"min":233.7,"max":488.2},{"t":"2026-07-31T01:00:00","mean":234.3,"min":232.3,"max":236.2},{"t":"2026-07-31T01:10:00","mean":234.0,"min":231.6,"max":236.0},{"t":"2026-07-31T01:20:00","mean":234.0,"min":231.6,"max":235.5},{"t":"2026-07-31T01:30:00","mean":234.0,"min":231.3,"max":235.7},{"t":"2026-07-31T01:40:00","mean":234.2,"min":232.2,"max":235.8},{"t":"2026-07-31T01:50:00","mean":234.0,"min":232.2,"max":235.7},{"t":"2026-07-31T02:00:00","mean":234.2,"min":232.3,"max":236.6},{"t":"2026-07-31T02:10:00","mean":234.2,"min":232.3,"max":235.7},{"t":"2026-07-31T02:20:00","mean":234.2,"min":232.3,"max":235.7},{"t":"2026-07-31T02:30:00","mean":398.6,"min":232.5,"max":490.1},{"t":"2026-07-31T02:40:00","mean":250.6,"min":232.8,"max":489.0},{"t":"2026-07-31T02:50:00","mean":234.3,"min":231.8,"max":236.3},{"t":"2026-07-31T03:00:00","mean":234.1,"min":232.2,"max":235.7},{"t":"2026-07-31T03:10:00","mean":234.0,"min":232.3,"max":235.5},{"t":"2026-07-31T03:20:00","mean":234.2,"min":232.0,"max":237.0},{"t":"2026-07-31T03:30:00","mean":234.0,"min":231.5,"max":236.0},{"t":"2026-07-31T03:40:00","mean":233.9,"min":231.8,"max":235.7},{"t":"2026-07-31T03:50:00","mean":233.7,"min":232.1,"max":236.1},{"t":"2026-07-31T04:00:00","mean":234.1,"min":231.5,"max":236.2},{"t":"2026-07-31T04:10:00","mean":234.2,"min":232.7,"max":235.8},{"t":"2026-07-31T04:20:00","mean":396.3,"min":231.3,"max":489.8},{"t":"2026-07-31T04:30:00","mean":254.3,"min":232.5,"max":489.5},{"t":"2026-07-31T04:40:00","mean":234.2,"min":231.6,"max":236.1},{"t":"2026-07-31T04:50:00","mean":233.9,"min":232.1,"max":236.0},{"t":"2026-07-31T05:00:00","mean":233.8,"min":231.8,"max":236.0},{"t":"2026-07-31T05:10:00","mean":234.2,"min":232.0,"max":236.2},{"t":"2026-07-31T05:20:00","mean":234.0,"min":232.0,"max":236.2},{"t":"2026-07-31T05:30:00","mean":234.0,"min":231.8,"max":235.2},{"t":"2026-07-31T05:40:00","mean":234.1,"min":232.6,"max":236.5},{"t":"2026-07-31T05:50:00","mean":233.9,"min":231.8,"max":236.0},{"t":"2026-07-31T06:00:00","mean":233.8,"min":232.3,"max":235.7},{"t":"2026-07-31T06:10:00","mean":411.6,"min":237.8,"max":489.3},{"t":"2026-07-31T06:20:00","mean":235.4,"min":233.0,"max":241.6},{"t":"2026-07-31T06:30:00","mean":234.2,"min":232.0,"max":236.3},{"t":"2026-07-31T06:40:00","mean":234.4,"min":232.8,"max":236.5},{"t":"2026-07-31T06:50:00","mean":234.0,"min":231.8,"max":235.8},{"t":"2026-07-31T07:00:00","mean":234.1,"min":232.1,"max":235.8},{"t":"2026-07-31T07:10:00","mean":234.2,"min":231.5,"max":236.0},{"t":"2026-07-31T07:20:00","mean":234.2,"min":232.1,"max":235.6},{"t":"2026-07-31T07:30:00","mean":234.0,"min":232.0,"max":236.7},{"t":"2026-07-31T07:40:00","mean":233.9,"min":231.2,"max":235.2},{"t":"2026-07-31T07:50:00","mean":285.4,"min":232.5,"max":487.6},{"t":"2026-07-31T08:00:00","mean":363.6,"min":237.7,"max":489.6},{"t":"2026-07-31T08:10:00","mean":235.6,"min":233.0,"max":240.7},{"t":"2026-07-31T08:20:00","mean":234.4,"min":232.7,"max":235.7},{"t":"2026-07-31T08:30:00","mean":234.3,"min":232.5,"max":236.5},{"t":"2026-07-31T08:40:00","mean":234.2,"min":231.7,"max":236.6},{"t":"2026-07-31T08:50:00","mean":234.1,"min":232.5,"max":235.7},{"t":"2026-07-31T09:00:00","mean":234.5,"min":232.3,"max":236.6},{"t":"2026-07-31T09:10:00","mean":234.1,"min":231.2,"max":235.5},{"t":"2026-07-31T09:20:00","mean":234.0,"min":232.0,"max":235.7},{"t":"2026-07-31T09:30:00","mean":234.2,"min":232.5,"max":236.1},{"t":"2026-07-31T09:40:00","mean":233.8,"min":231.2,"max":235.8},{"t":"2026-07-31T09:50:00","mean":383.2,"min":233.1,"max":489.8},{"t":"2026-07-31T10:00:00","mean":235.5,"min":233.0,"max":240.6},{"t":"2026-07-31T10:10:00","mean":234.0,"min":232.1,"max":236.1},{"t":"2026-07-31T10:20:00","mean":234.0,"min":232.5,"max":236.2},{"t":"2026-07-31T10:30:00","mean":234.3,"min":232.7,"max":235.8},{"t":"2026-07-31T10:40:00","mean":233.9,"min":232.0,"max":235.7},{"t":"2026-07-31T10:50:00","mean":234.1,"min":232.1,"max":235.8},{"t":"2026-07-31T11:00:00","mean":234.0,"min":232.0,"max":235.6},{"t":"2026-07-31T11:10:00","mean":234.0,"min":231.8,"max":235.5},{"t":"2026-07-31T11:20:00","mean":408.9,"min":233.3,"max":490.1},{"t":"2026-07-31T11:30:00","mean":251.2,"min":237.5,"max":487.0},{"t":"2026-07-31T11:40:00","mean":239.4,"min":237.6,"max":240.8},{"t":"2026-07-31T11:50:00","mean":239.4,"min":237.3,"max":241.1},{"t":"2026-07-31T12:00:00","mean":238.9,"min":237.1,"max":240.7},{"t":"2026-07-31T12:10:00","mean":239.4,"min":238.0,"max":241.5},{"t":"2026-07-31T12:20:00","mean":238.5,"min":233.0,"max":240.8},{"t":"2026-07-31T12:30:00","mean":234.1,"min":232.5,"max":236.5},{"t":"2026-07-31T12:40:00","mean":234.2,"min":232.2,"max":235.7},{"t":"2026-07-31T12:50:00","mean":234.1,"min":232.3,"max":236.0},{"t":"2026-07-31T13:00:00","mean":234.0,"min":232.6,"max":235.6},{"t":"2026-07-31T13:10:00","mean":324.8,"min":232.3,"max":488.8},{"t":"2026-07-31T13:20:00","mean":332.1,"min":237.1,"max":489.6},{"t":"2026-07-31T13:30:00","mean":239.2,"min":237.8,"max":240.8},{"t":"2026-07-31T13:40:00","mean":239.2,"min":237.2,"max":240.8},{"t":"2026-07-31T13:50:00","mean":238.9,"min":237.5,"max":240.7},{"t":"2026-07-31T14:00:00","mean":239.1,"min":237.0,"max":240.5},{"t":"2026-07-31T14:10:00","mean":239.1,"min":237.2,"max":240.7},{"t":"2026-07-31T14:20:00","mean":239.2,"min":237.2,"max":241.5},{"t":"2026-07-31T14:30:00","mean":237.8,"min":232.6,"max":240.7},{"t":"2026-07-31T14:40:00","mean":234.0,"min":232.1,"max":235.8},{"t":"2026-07-31T14:50:00","mean":233.8,"min":232.1,"max":235.7},{"t":"2026-07-31T15:00:00","mean":265.1,"min":232.1,"max":478.7},{"t":"2026-07-31T15:10:00","mean":390.2,"min":237.7,"max":489.6},{"t":"2026-07-31T15:20:00","mean":239.5,"min":237.8,"max":241.6},{"t":"2026-07-31T15:30:00","mean":239.1,"min":237.2,"max":241.1},{"t":"2026-07-31T15:40:00","mean":239.1,"min":237.6,"max":241.3},{"t":"2026-07-31T15:50:00","mean":239.0,"min":237.5,"max":241.1},{"t":"2026-07-31T16:00:00","mean":239.0,"min":237.5,"max":240.5},{"t":"2026-07-31T16:10:00","mean":239.1,"min":237.2,"max":240.7},{"t":"2026-07-31T16:20:00","mean":239.0,"min":236.8,"max":241.1},{"t":"2026-07-31T16:30:00","mean":238.8,"min":237.2,"max":240.7},{"t":"2026-07-31T16:40:00","mean":239.2,"min":237.6,"max":241.1},{"t":"2026-07-31T16:50:00","mean":238.3,"min":233.5,"max":241.1},{"t":"2026-07-31T17:00:00","mean":422.6,"min":234.1,"max":491.1},{"t":"2026-07-31T17:10:00","mean":239.5,"min":237.7,"max":241.2},{"t":"2026-07-31T17:20:00","mean":239.3,"min":237.6,"max":241.2},{"t":"2026-07-31T17:30:00","mean":239.1,"min":237.3,"max":241.1},{"t":"2026-07-31T17:40:00","mean":239.2,"min":237.3,"max":241.0},{"t":"2026-07-31T17:50:00","mean":239.2,"min":237.6,"max":241.1},{"t":"2026-07-31T18:00:00","mean":238.9,"min":237.2,"max":240.5},{"t":"2026-07-31T18:10:00","mean":238.8,"min":237.1,"max":240.7}]},{"label":"31 Jul","start":"2026-07-31T18:13:22","end":"2026-08-01T18:13:12","abnormal":true,"is_idle":false,"mean":259.8,"max":491.6,"points":[{"t":"2026-07-31T18:10:00","mean":238.9,"min":237.6,"max":240.5},{"t":"2026-07-31T18:20:00","mean":235.4,"min":232.3,"max":240.2},{"t":"2026-07-31T18:30:00","mean":234.1,"min":232.6,"max":236.2},{"t":"2026-07-31T18:40:00","mean":234.1,"min":232.3,"max":236.1},{"t":"2026-07-31T18:50:00","mean":422.0,"min":235.2,"max":489.8},{"t":"2026-07-31T19:00:00","mean":239.5,"min":238.0,"max":241.6},{"t":"2026-07-31T19:10:00","mean":239.1,"min":237.3,"max":241.0},{"t":"2026-07-31T19:20:00","mean":239.2,"min":237.3,"max":241.1},{"t":"2026-07-31T19:30:00","mean":239.2,"min":237.6,"max":241.0},{"t":"2026-07-31T19:40:00","mean":239.3,"min":237.5,"max":241.6},{"t":"2026-07-31T19:50:00","mean":239.3,"min":237.5,"max":241.1},{"t":"2026-07-31T20:00:00","mean":239.2,"min":237.1,"max":241.0},{"t":"2026-07-31T20:10:00","mean":239.3,"min":237.8,"max":240.7},{"t":"2026-07-31T20:20:00","mean":239.3,"min":237.3,"max":240.7},{"t":"2026-07-31T20:30:00","mean":238.4,"min":231.7,"max":241.0},{"t":"2026-07-31T20:40:00","mean":422.7,"min":236.5,"max":491.6},{"t":"2026-07-31T20:50:00","mean":239.6,"min":237.8,"max":241.1},{"t":"2026-07-31T21:00:00","mean":239.1,"min":236.0,"max":241.2},{"t":"2026-07-31T21:10:00","mean":239.2,"min":237.0,"max":240.8},{"t":"2026-07-31T21:20:00","mean":239.1,"min":237.0,"max":241.5},{"t":"2026-07-31T21:30:00","mean":239.3,"min":237.7,"max":241.1},{"t":"2026-07-31T21:40:00","mean":239.2,"min":237.8,"max":241.2},{"t":"2026-07-31T21:50:00","mean":239.5,"min":237.3,"max":241.5},{"t":"2026-07-31T22:00:00","mean":237.4,"min":233.0,"max":240.7},{"t":"2026-07-31T22:10:00","mean":234.2,"min":232.0,"max":236.3},{"t":"2026-07-31T22:20:00","mean":273.9,"min":232.6,"max":484.3},{"t":"2026-07-31T22:30:00","mean":381.7,"min":238.2,"max":489.8},{"t":"2026-07-31T22:40:00","mean":239.5,"min":238.1,"max":241.3},{"t":"2026-07-31T22:50:00","mean":239.6,"min":238.0,"max":241.6},{"t":"2026-07-31T23:00:00","mean":239.3,"min":237.8,"max":241.2},{"t":"2026-07-31T23:10:00","mean":239.3,"min":237.3,"max":241.1},{"t":"2026-07-31T23:20:00","mean":239.0,"min":237.1,"max":240.6},{"t":"2026-07-31T23:30:00","mean":239.3,"min":236.8,"max":241.2},{"t":"2026-07-31T23:40:00","mean":236.1,"min":232.6,"max":240.8},{"t":"2026-07-31T23:50:00","mean":234.4,"min":232.0,"max":236.1},{"t":"2026-08-01T00:00:00","mean":234.2,"min":232.3,"max":236.1},{"t":"2026-08-01T00:10:00","mean":336.2,"min":232.6,"max":489.1},{"t":"2026-08-01T00:20:00","mean":322.6,"min":237.6,"max":489.1},{"t":"2026-08-01T00:30:00","mean":239.5,"min":238.3,"max":241.1},{"t":"2026-08-01T00:40:00","mean":239.4,"min":237.1,"max":241.7},{"t":"2026-08-01T00:50:00","mean":239.3,"min":236.8,"max":241.5},{"t":"2026-08-01T01:00:00","mean":239.1,"min":237.0,"max":240.6},{"t":"2026-08-01T01:10:00","mean":239.3,"min":237.7,"max":242.0},{"t":"2026-08-01T01:20:00","mean":239.2,"min":236.7,"max":241.0},{"t":"2026-08-01T01:30:00","mean":234.6,"min":232.2,"max":239.1},{"t":"2026-08-01T01:40:00","mean":234.5,"min":232.6,"max":236.3},{"t":"2026-08-01T01:50:00","mean":234.2,"min":232.3,"max":236.0},{"t":"2026-08-01T02:00:00","mean":392.2,"min":232.3,"max":490.1},{"t":"2026-08-01T02:10:00","mean":267.0,"min":237.3,"max":489.1},{"t":"2026-08-01T02:20:00","mean":239.6,"min":237.7,"max":241.3},{"t":"2026-08-01T02:30:00","mean":239.4,"min":237.3,"max":241.5},{"t":"2026-08-01T02:40:00","mean":239.1,"min":238.0,"max":241.1},{"t":"2026-08-01T02:50:00","mean":238.7,"min":234.2,"max":241.0},{"t":"2026-08-01T03:00:00","mean":234.4,"min":232.5,"max":236.8},{"t":"2026-08-01T03:10:00","mean":234.6,"min":232.5,"max":236.1},{"t":"2026-08-01T03:20:00","mean":234.2,"min":232.2,"max":235.6},{"t":"2026-08-01T03:30:00","mean":234.2,"min":232.2,"max":235.7},{"t":"2026-08-01T03:40:00","mean":234.3,"min":232.5,"max":236.2},{"t":"2026-08-01T03:50:00","mean":390.9,"min":232.6,"max":489.7},{"t":"2026-08-01T04:00:00","mean":268.0,"min":237.7,"max":489.3},{"t":"2026-08-01T04:10:00","mean":239.3,"min":237.6,"max":241.6},{"t":"2026-08-01T04:20:00","mean":239.3,"min":237.8,"max":241.2},{"t":"2026-08-01T04:30:00","mean":238.1,"min":233.1,"max":240.7},{"t":"2026-08-01T04:40:00","mean":234.3,"min":232.8,"max":236.2},{"t":"2026-08-01T04:50:00","mean":234.3,"min":232.1,"max":236.2},{"t":"2026-08-01T05:00:00","mean":234.2,"min":232.5,"max":235.8},{"t":"2026-08-01T05:10:00","mean":234.1,"min":232.0,"max":235.7},{"t":"2026-08-01T05:20:00","mean":225.2,"min":0.0,"max":480.7},{"t":"2026-08-01T05:30:00","mean":186.1,"min":0.0,"max":434.7},{"t":"2026-08-01T05:40:00","mean":230.7,"min":225.2,"max":234.2},{"t":"2026-08-01T05:50:00","mean":231.1,"min":229.2,"max":232.3},{"t":"2026-08-01T06:00:00","mean":230.9,"min":229.5,"max":232.6},{"t":"2026-08-01T06:10:00","mean":309.9,"min":229.2,"max":470.5},{"t":"2026-08-01T06:20:00","mean":301.0,"min":235.0,"max":471.7},{"t":"2026-08-01T06:30:00","mean":236.8,"min":235.3,"max":239.3},{"t":"2026-08-01T06:40:00","mean":236.4,"min":234.0,"max":238.6},{"t":"2026-08-01T06:50:00","mean":236.5,"min":234.6,"max":238.3},{"t":"2026-08-01T07:00:00","mean":236.1,"min":234.8,"max":237.7},{"t":"2026-08-01T07:10:00","mean":235.0,"min":229.7,"max":237.8},{"t":"2026-08-01T07:20:00","mean":379.7,"min":233.2,"max":470.7},{"t":"2026-08-01T07:30:00","mean":236.6,"min":234.1,"max":238.5},{"t":"2026-08-01T07:40:00","mean":236.3,"min":234.7,"max":238.6},{"t":"2026-08-01T07:50:00","mean":236.0,"min":234.3,"max":237.5},{"t":"2026-08-01T08:00:00","mean":235.6,"min":233.8,"max":237.0},{"t":"2026-08-01T08:10:00","mean":235.8,"min":234.3,"max":238.1},{"t":"2026-08-01T08:20:00","mean":316.7,"min":233.7,"max":470.2},{"t":"2026-08-01T08:30:00","mean":306.5,"min":235.1,"max":470.6},{"t":"2026-08-01T08:40:00","mean":236.2,"min":234.5,"max":238.0},{"t":"2026-08-01T08:50:00","mean":236.0,"min":234.6,"max":238.5},{"t":"2026-08-01T09:00:00","mean":236.2,"min":234.6,"max":237.5},{"t":"2026-08-01T09:10:00","mean":236.0,"min":234.3,"max":237.5},{"t":"2026-08-01T09:20:00","mean":236.0,"min":234.6,"max":238.5},{"t":"2026-08-01T09:30:00","mean":380.1,"min":233.8,"max":471.2},{"t":"2026-08-01T09:40:00","mean":235.8,"min":234.0,"max":237.3},{"t":"2026-08-01T09:50:00","mean":235.6,"min":232.6,"max":237.7},{"t":"2026-08-01T10:00:00","mean":235.5,"min":233.3,"max":237.3},{"t":"2026-08-01T10:10:00","mean":235.5,"min":234.0,"max":237.2},{"t":"2026-08-01T10:20:00","mean":235.4,"min":233.6,"max":237.1},{"t":"2026-08-01T10:30:00","mean":382.2,"min":235.0,"max":471.1},{"t":"2026-08-01T10:40:00","mean":237.3,"min":233.5,"max":316.5},{"t":"2026-08-01T10:50:00","mean":235.7,"min":233.7,"max":237.0},{"t":"2026-08-01T11:00:00","mean":235.8,"min":234.1,"max":238.2},{"t":"2026-08-01T11:10:00","mean":235.8,"min":233.8,"max":237.7},{"t":"2026-08-01T11:20:00","mean":235.8,"min":233.8,"max":237.3},{"t":"2026-08-01T11:30:00","mean":239.5,"min":234.6,"max":437.7},{"t":"2026-08-01T11:40:00","mean":371.4,"min":233.7,"max":471.8},{"t":"2026-08-01T11:50:00","mean":236.0,"min":234.5,"max":238.1},{"t":"2026-08-01T12:00:00","mean":235.6,"min":232.8,"max":237.2},{"t":"2026-08-01T12:10:00","mean":235.5,"min":233.8,"max":237.6},{"t":"2026-08-01T12:20:00","mean":235.4,"min":234.1,"max":237.3},{"t":"2026-08-01T12:30:00","mean":235.5,"min":233.7,"max":237.3},{"t":"2026-08-01T12:40:00","mean":371.2,"min":233.0,"max":471.1},{"t":"2026-08-01T12:50:00","mean":236.0,"min":234.1,"max":238.0},{"t":"2026-08-01T13:00:00","mean":235.9,"min":234.2,"max":237.8},{"t":"2026-08-01T13:10:00","mean":235.7,"min":233.7,"max":238.0},{"t":"2026-08-01T13:20:00","mean":235.7,"min":233.6,"max":237.5},{"t":"2026-08-01T13:30:00","mean":235.7,"min":233.6,"max":237.6},{"t":"2026-08-01T13:40:00","mean":370.1,"min":234.3,"max":472.2},{"t":"2026-08-01T13:50:00","mean":236.0,"min":233.7,"max":237.8},{"t":"2026-08-01T14:00:00","mean":235.7,"min":233.5,"max":237.3},{"t":"2026-08-01T14:10:00","mean":235.8,"min":234.2,"max":237.7},{"t":"2026-08-01T14:20:00","mean":235.8,"min":234.0,"max":237.6},{"t":"2026-08-01T14:30:00","mean":236.0,"min":234.5,"max":237.8},{"t":"2026-08-01T14:40:00","mean":371.8,"min":234.0,"max":470.8},{"t":"2026-08-01T14:50:00","mean":235.8,"min":234.2,"max":238.0},{"t":"2026-08-01T15:00:00","mean":235.9,"min":234.3,"max":237.6},{"t":"2026-08-01T15:10:00","mean":254.4,"min":234.0,"max":471.1},{"t":"2026-08-01T15:20:00","mean":387.0,"min":234.7,"max":470.2},{"t":"2026-08-01T15:30:00","mean":236.0,"min":234.5,"max":237.5},{"t":"2026-08-01T15:40:00","mean":235.7,"min":233.8,"max":238.6},{"t":"2026-08-01T15:50:00","mean":427.4,"min":233.7,"max":471.0},{"t":"2026-08-01T16:00:00","mean":301.8,"min":234.5,"max":470.1},{"t":"2026-08-01T16:10:00","mean":235.7,"min":234.5,"max":237.2},{"t":"2026-08-01T16:20:00","mean":257.6,"min":233.5,"max":470.7},{"t":"2026-08-01T16:30:00","mean":409.2,"min":234.6,"max":471.3},{"t":"2026-08-01T16:40:00","mean":236.0,"min":234.1,"max":237.3},{"t":"2026-08-01T16:50:00","mean":236.1,"min":234.1,"max":238.3},{"t":"2026-08-01T17:00:00","mean":362.8,"min":234.2,"max":472.2},{"t":"2026-08-01T17:10:00","mean":323.7,"min":233.8,"max":469.8},{"t":"2026-08-01T17:20:00","mean":235.1,"min":232.6,"max":236.7},{"t":"2026-08-01T17:30:00","mean":235.1,"min":233.2,"max":236.8},{"t":"2026-08-01T17:40:00","mean":436.5,"min":234.2,"max":469.7},{"t":"2026-08-01T17:50:00","mean":235.4,"min":233.2,"max":237.3},{"t":"2026-08-01T18:00:00","mean":235.0,"min":233.3,"max":236.7},{"t":"2026-08-01T18:10:00","mean":234.9,"min":233.7,"max":236.3}]},{"label":"01 Aug","start":"2026-08-01T18:13:22","end":"2026-08-02T18:13:12","abnormal":true,"is_idle":false,"mean":286.4,"max":471.3,"points":[{"t":"2026-08-01T18:10:00","mean":338.2,"min":234.1,"max":470.1},{"t":"2026-08-01T18:20:00","mean":363.0,"min":233.8,"max":468.7},{"t":"2026-08-01T18:30:00","mean":235.0,"min":232.1,"max":236.6},{"t":"2026-08-01T18:40:00","mean":234.8,"min":233.2,"max":236.5},{"t":"2026-08-01T18:50:00","mean":393.5,"min":232.7,"max":470.6},{"t":"2026-08-01T19:00:00","mean":268.7,"min":233.0,"max":468.3},{"t":"2026-08-01T19:10:00","mean":235.0,"min":233.3,"max":237.2},{"t":"2026-08-01T19:20:00","mean":243.6,"min":231.3,"max":467.1},{"t":"2026-08-01T19:30:00","mean":402.7,"min":234.6,"max":469.5},{"t":"2026-08-01T19:40:00","mean":235.2,"min":233.1,"max":236.8},{"t":"2026-08-01T19:50:00","mean":235.0,"min":233.8,"max":236.8},{"t":"2026-08-01T20:00:00","mean":374.3,"min":234.1,"max":468.3},{"t":"2026-08-01T20:10:00","mean":331.9,"min":233.5,"max":468.8},{"t":"2026-08-01T20:20:00","mean":235.1,"min":233.3,"max":236.6},{"t":"2026-08-01T20:30:00","mean":235.0,"min":233.2,"max":237.0},{"t":"2026-08-01T20:40:00","mean":337.3,"min":232.5,"max":469.5},{"t":"2026-08-01T20:50:00","mean":410.2,"min":234.3,"max":469.3},{"t":"2026-08-01T21:00:00","mean":235.1,"min":233.5,"max":236.8},{"t":"2026-08-01T21:10:00","mean":234.9,"min":232.7,"max":236.8},{"t":"2026-08-01T21:20:00","mean":234.9,"min":232.6,"max":236.6},{"t":"2026-08-01T21:30:00","mean":255.4,"min":233.3,"max":469.7},{"t":"2026-08-01T21:40:00","mean":467.0,"min":464.5,"max":469.2},{"t":"2026-08-01T21:50:00","mean":241.8,"min":234.0,"max":464.0},{"t":"2026-08-01T22:00:00","mean":235.2,"min":233.6,"max":237.5},{"t":"2026-08-01T22:10:00","mean":278.2,"min":233.0,"max":470.2},{"t":"2026-08-01T22:20:00","mean":358.8,"min":233.3,"max":469.0},{"t":"2026-08-01T22:30:00","mean":235.2,"min":233.6,"max":237.1},{"t":"2026-08-01T22:40:00","mean":234.9,"min":233.3,"max":237.5},{"t":"2026-08-01T22:50:00","mean":408.5,"min":233.5,"max":470.3},{"t":"2026-08-01T23:00:00","mean":259.9,"min":233.5,"max":469.2},{"t":"2026-08-01T23:10:00","mean":235.3,"min":233.6,"max":237.1},{"t":"2026-08-01T23:20:00","mean":253.3,"min":233.2,"max":470.6},{"t":"2026-08-01T23:30:00","mean":391.1,"min":232.8,"max":469.8},{"t":"2026-08-01T23:40:00","mean":235.2,"min":232.5,"max":237.6},{"t":"2026-08-01T23:50:00","mean":235.2,"min":233.2,"max":236.8},{"t":"2026-08-02T00:00:00","mean":349.2,"min":232.8,"max":469.6},{"t":"2026-08-02T00:10:00","mean":297.8,"min":232.8,"max":467.7},{"t":"2026-08-02T00:20:00","mean":235.1,"min":233.3,"max":237.3},{"t":"2026-08-02T00:30:00","mean":235.8,"min":232.5,"max":292.6},{"t":"2026-08-02T00:40:00","mean":439.9,"min":233.7,"max":469.3},{"t":"2026-08-02T00:50:00","mean":235.5,"min":234.0,"max":237.2},{"t":"2026-08-02T01:00:00","mean":234.9,"min":232.2,"max":237.0},{"t":"2026-08-02T01:10:00","mean":310.7,"min":233.5,"max":469.7},{"t":"2026-08-02T01:20:00","mean":349.0,"min":233.3,"max":471.3},{"t":"2026-08-02T01:30:00","mean":234.8,"min":233.3,"max":236.7},{"t":"2026-08-02T01:40:00","mean":234.8,"min":233.1,"max":236.7},{"t":"2026-08-02T01:50:00","mean":403.9,"min":233.5,"max":469.0},{"t":"2026-08-02T02:00:00","mean":251.4,"min":232.7,"max":468.6},{"t":"2026-08-02T02:10:00","mean":235.2,"min":233.1,"max":237.5},{"t":"2026-08-02T02:20:00","mean":256.5,"min":233.2,"max":468.2},{"t":"2026-08-02T02:30:00","mean":395.9,"min":234.2,"max":468.6},{"t":"2026-08-02T02:40:00","mean":235.4,"min":233.3,"max":237.1},{"t":"2026-08-02T02:50:00","mean":235.1,"min":233.3,"max":236.5},{"t":"2026-08-02T03:00:00","mean":355.6,"min":233.3,"max":468.8},{"t":"2026-08-02T03:10:00","mean":297.5,"min":233.1,"max":469.3},{"t":"2026-08-02T03:20:00","mean":234.9,"min":233.0,"max":236.7},{"t":"2026-08-02T03:30:00","mean":234.9,"min":232.6,"max":236.7},{"t":"2026-08-02T03:40:00","mean":404.8,"min":234.3,"max":468.5},{"t":"2026-08-02T03:50:00","mean":235.4,"min":233.6,"max":237.8},{"t":"2026-08-02T04:00:00","mean":235.0,"min":232.8,"max":236.6},{"t":"2026-08-02T04:10:00","mean":311.2,"min":233.7,"max":468.8},{"t":"2026-08-02T04:20:00","mean":335.3,"min":233.8,"max":468.7},{"t":"2026-08-02T04:30:00","mean":235.2,"min":233.2,"max":236.8},{"t":"2026-08-02T04:40:00","mean":235.4,"min":233.3,"max":237.1},{"t":"2026-08-02T04:50:00","mean":385.0,"min":233.1,"max":469.7},{"t":"2026-08-02T05:00:00","mean":256.3,"min":233.8,"max":470.6},{"t":"2026-08-02T05:10:00","mean":234.7,"min":232.5,"max":237.0},{"t":"2026-08-02T05:20:00","mean":272.9,"min":233.2,"max":469.3},{"t":"2026-08-02T05:30:00","mean":383.9,"min":233.5,"max":468.3},{"t":"2026-08-02T05:40:00","mean":234.9,"min":233.6,"max":237.2},{"t":"2026-08-02T05:50:00","mean":235.1,"min":232.7,"max":237.5},{"t":"2026-08-02T06:00:00","mean":337.1,"min":233.7,"max":468.0},{"t":"2026-08-02T06:10:00","mean":301.3,"min":233.7,"max":468.0},{"t":"2026-08-02T06:20:00","mean":235.2,"min":233.2,"max":237.1},{"t":"2026-08-02T06:30:00","mean":234.9,"min":232.6,"max":236.3},{"t":"2026-08-02T06:40:00","mean":420.4,"min":234.1,"max":469.7},{"t":"2026-08-02T06:50:00","mean":235.4,"min":233.5,"max":236.8},{"t":"2026-08-02T07:00:00","mean":235.0,"min":233.1,"max":236.8},{"t":"2026-08-02T07:10:00","mean":328.6,"min":233.6,"max":467.7},{"t":"2026-08-02T07:20:00","mean":340.1,"min":234.2,"max":468.3},{"t":"2026-08-02T07:30:00","mean":235.1,"min":233.3,"max":237.1},{"t":"2026-08-02T07:40:00","mean":234.9,"min":233.1,"max":237.7},{"t":"2026-08-02T07:50:00","mean":358.6,"min":233.3,"max":469.7},{"t":"2026-08-02T08:00:00","mean":270.1,"min":233.3,"max":466.7},{"t":"2026-08-02T08:10:00","mean":235.0,"min":233.1,"max":237.2},{"t":"2026-08-02T08:20:00","mean":277.2,"min":233.0,"max":468.3},{"t":"2026-08-02T08:30:00","mean":377.5,"min":233.5,"max":468.3},{"t":"2026-08-02T08:40:00","mean":235.1,"min":233.3,"max":236.7},{"t":"2026-08-02T08:50:00","mean":235.1,"min":232.7,"max":237.1},{"t":"2026-08-02T09:00:00","mean":378.9,"min":233.8,"max":468.2},{"t":"2026-08-02T09:10:00","mean":286.0,"min":233.3,"max":468.7},{"t":"2026-08-02T09:20:00","mean":235.3,"min":233.6,"max":236.8},{"t":"2026-08-02T09:30:00","mean":235.2,"min":232.6,"max":237.7},{"t":"2026-08-02T09:40:00","mean":394.2,"min":233.7,"max":469.1},{"t":"2026-08-02T09:50:00","mean":235.2,"min":233.1,"max":236.8},{"t":"2026-08-02T10:00:00","mean":234.9,"min":233.2,"max":237.2},{"t":"2026-08-02T10:10:00","mean":342.1,"min":232.7,"max":469.2},{"t":"2026-08-02T10:20:00","mean":328.1,"min":233.5,"max":468.0},{"t":"2026-08-02T10:30:00","mean":235.4,"min":233.6,"max":237.0},{"t":"2026-08-02T10:40:00","mean":235.1,"min":232.7,"max":237.0},{"t":"2026-08-02T10:50:00","mean":406.4,"min":233.1,"max":470.3},{"t":"2026-08-02T11:00:00","mean":235.4,"min":233.8,"max":247.1},{"t":"2026-08-02T11:10:00","mean":235.2,"min":232.6,"max":237.7},{"t":"2026-08-02T11:20:00","mean":291.4,"min":233.3,"max":469.7},{"t":"2026-08-02T11:30:00","mean":366.9,"min":232.8,"max":468.0},{"t":"2026-08-02T11:40:00","mean":235.2,"min":232.6,"max":237.2},{"t":"2026-08-02T11:50:00","mean":235.0,"min":233.0,"max":236.6},{"t":"2026-08-02T12:00:00","mean":235.0,"min":233.3,"max":236.8},{"t":"2026-08-02T12:10:00","mean":365.1,"min":232.2,"max":468.8},{"t":"2026-08-02T12:20:00","mean":342.1,"min":233.7,"max":467.7},{"t":"2026-08-02T12:30:00","mean":235.2,"min":233.7,"max":236.6},{"t":"2026-08-02T12:40:00","mean":235.2,"min":233.7,"max":236.6},{"t":"2026-08-02T12:50:00","mean":413.1,"min":233.5,"max":469.6},{"t":"2026-08-02T13:00:00","mean":235.5,"min":233.2,"max":252.7},{"t":"2026-08-02T13:10:00","mean":235.2,"min":234.0,"max":236.6},{"t":"2026-08-02T13:20:00","mean":304.6,"min":233.5,"max":470.0},{"t":"2026-08-02T13:30:00","mean":367.0,"min":233.5,"max":468.3},{"t":"2026-08-02T13:40:00","mean":235.4,"min":233.2,"max":237.0},{"t":"2026-08-02T13:50:00","mean":235.1,"min":233.0,"max":236.6},{"t":"2026-08-02T14:00:00","mean":372.3,"min":233.2,"max":469.0},{"t":"2026-08-02T14:10:00","mean":271.3,"min":233.7,"max":468.0},{"t":"2026-08-02T14:20:00","mean":235.0,"min":233.3,"max":236.7},{"t":"2026-08-02T14:30:00","mean":245.9,"min":233.0,"max":468.5},{"t":"2026-08-02T14:40:00","mean":409.8,"min":234.0,"max":469.8},{"t":"2026-08-02T14:50:00","mean":235.3,"min":232.5,"max":237.5},{"t":"2026-08-02T15:00:00","mean":235.0,"min":232.5,"max":236.5},{"t":"2026-08-02T15:10:00","mean":341.7,"min":233.3,"max":469.5},{"t":"2026-08-02T15:20:00","mean":321.5,"min":233.6,"max":468.2},{"t":"2026-08-02T15:30:00","mean":235.4,"min":233.3,"max":237.0},{"t":"2026-08-02T15:40:00","mean":234.9,"min":233.6,"max":236.5},{"t":"2026-08-02T15:50:00","mean":396.2,"min":233.8,"max":470.6},{"t":"2026-08-02T16:00:00","mean":235.0,"min":233.6,"max":238.8},{"t":"2026-08-02T16:10:00","mean":235.2,"min":232.6,"max":237.3},{"t":"2026-08-02T16:20:00","mean":295.4,"min":233.6,"max":469.2},{"t":"2026-08-02T16:30:00","mean":355.6,"min":233.7,"max":468.8},{"t":"2026-08-02T16:40:00","mean":235.2,"min":233.0,"max":237.2},{"t":"2026-08-02T16:50:00","mean":235.1,"min":233.3,"max":236.6},{"t":"2026-08-02T17:00:00","mean":383.4,"min":233.8,"max":470.1},{"t":"2026-08-02T17:10:00","mean":262.7,"min":232.7,"max":467.6},{"t":"2026-08-02T17:20:00","mean":235.2,"min":233.6,"max":237.2},{"t":"2026-08-02T17:30:00","mean":259.0,"min":233.1,"max":468.3},{"t":"2026-08-02T17:40:00","mean":405.5,"min":233.5,"max":468.2},{"t":"2026-08-02T17:50:00","mean":235.2,"min":233.5,"max":236.7},{"t":"2026-08-02T18:00:00","mean":234.9,"min":233.2,"max":236.7},{"t":"2026-08-02T18:10:00","mean":235.0,"min":233.5,"max":236.3}]}],"thresholds":{"regulated_lo":200,"regulated_hi":300,"abnormal_hi":400},"band_breakdown":[{"label":"30 Jul","pct_le300":93.4,"pct_300_380":0.09,"pct_380_400":0.06,"pct_gt400":6.4,"n_300_380":8,"n_380_400":5,"n_gt400":553,"above_total":566,"share_300_380_of_above":1.4,"share_380_400_of_above":0.9,"share_gt400_of_above":97.7},{"label":"31 Jul","pct_le300":89.8,"pct_300_380":0.13,"pct_380_400":0.06,"pct_gt400":10.0,"n_300_380":11,"n_380_400":5,"n_gt400":864,"above_total":880,"share_300_380_of_above":1.2,"share_380_400_of_above":0.6,"share_gt400_of_above":98.2},{"label":"01 Aug","pct_le300":77.7,"pct_300_380":0.32,"pct_380_400":0.09,"pct_gt400":21.9,"n_300_380":28,"n_380_400":8,"n_gt400":1894,"above_total":1930,"share_300_380_of_above":1.5,"share_380_400_of_above":0.4,"share_gt400_of_above":98.1}],"quench":{"sessions":[{"file":"58269302-DATA20260509_211540_0109_00000023_000009.csv","label":"09 May","start":"2026-05-09T21:15:40","end":"2026-05-10T21:15:30","n":8640,"temp_min":123.9,"temp_mean":129.3,"temp_max":133.9,"flow_mean":232.3,"flow_max":343.6},{"file":"b35256ce-DATA20260525_211540_0109_00000023_000025.csv","label":"25 May","start":"2026-05-25T21:15:40","end":"2026-05-26T21:15:30","n":8640,"temp_min":125.8,"temp_mean":130.1,"temp_max":134.7,"flow_mean":241.4,"flow_max":344.1},{"file":"d75ee8e7-DATA20260613_175732_0109_00000027_000001.csv","label":"13 Jun","start":"2026-06-13T17:57:32","end":"2026-06-13T18:16:12","n":113,"temp_min":126.5,"temp_mean":127.7,"temp_max":128.8,"flow_mean":210.4,"flow_max":213.1},{"file":"e313f0e1-DATA20260622_181735_0109_00000028_000010.csv","label":"22 Jun","start":"2026-06-22T18:17:35","end":"2026-06-23T18:17:25","n":8640,"temp_min":125.3,"temp_mean":130.0,"temp_max":135.7,"flow_mean":245.1,"flow_max":351.3},{"file":"8f2afe79-DATA20260702_181735_0109_00000028_000020.csv","label":"02 Jul","start":"2026-07-02T18:17:35","end":"2026-07-03T18:17:25","n":8640,"temp_min":125.0,"temp_mean":130.1,"temp_max":134.3,"flow_mean":245.3,"flow_max":348.0},{"file":"63f7a577-DATA20260711_094054_0109_00000030_000001.csv","label":"11 Jul","start":"2026-07-11T09:40:54","end":"2026-07-12T09:40:44","n":8640,"temp_min":109.9,"temp_mean":123.4,"temp_max":132.8,"flow_mean":216.2,"flow_max":349.3},{"file":"4ee0cd5b-DATA20260718_094054_0109_00000030_000008.csv","label":"18 Jul","start":"2026-07-18T09:40:54","end":"2026-07-19T09:40:44","n":8640,"temp_min":125.9,"temp_mean":130.1,"temp_max":135.8,"flow_mean":238.2,"flow_max":351.6},{"file":"0012e092-DATA20260726_094054_0109_00000030_000016.csv","label":"26 Jul","start":"2026-07-26T09:40:54","end":"2026-07-26T20:05:14","n":3747,"temp_min":36.5,"temp_mean":36.6,"temp_max":36.7,"flow_mean":203.6,"flow_max":206.3},{"file":"c9af2980-DATA20260727_084256_0109_00000033_000001.csv","label":"27 Jul","start":"2026-07-27T08:42:56","end":"2026-07-27T16:52:46","n":2940,"temp_min":36.2,"temp_mean":36.3,"temp_max":36.5,"flow_mean":0.1,"flow_max":31.7},{"file":"52a31f0c-DATA20260729_093647_0109_00000034_000001.csv","label":"29 Jul","start":"2026-07-29T09:36:47","end":"2026-07-29T09:41:37","n":30,"temp_min":-16.6,"temp_mean":-3.9,"temp_max":6.7,"flow_mean":-25.0,"flow_max":-25.0},{"file":"e09dd678-DATA20260730_181322_0109_00000038_000002.csv","label":"30 Jul","start":"2026-07-30T18:13:22","end":"2026-07-31T18:13:12","n":8640,"temp_min":123.2,"temp_mean":127.8,"temp_max":132.0,"flow_mean":251.5,"flow_max":491.1},{"file":"ef73b652-DATA20260731_181322_0109_00000038_000003.csv","label":"31 Jul","start":"2026-07-31T18:13:22","end":"2026-08-01T18:13:12","n":8640,"temp_min":123.3,"temp_mean":128.2,"temp_max":134.8,"flow_mean":259.8,"flow_max":491.6},{"file":"4cfe21fb-DATA20260801_181322_0109_00000038_000004.csv","label":"01 Aug","start":"2026-08-01T18:13:22","end":"2026-08-02T18:13:12","n":8640,"temp_min":124.7,"temp_mean":129.2,"temp_max":134.8,"flow_mean":286.4,"flow_max":471.3}],"hot_baseline_labels":["09 May","25 May","13 Jun","22 Jun","02 Jul","11 Jul","18 Jul"],"hot_baseline":{"mu_mean":128.67,"sd_mean":2.3,"mu_max":133.71,"sd_max":2.22,"n":7},"abnormal_temp":[{"label":"30 Jul","temp_mean":127.8,"temp_max":132.0,"temp_min":123.2,"z_mean":-0.38,"z_max":-0.77,"flow_mean":251.5,"flow_max":491.1},{"label":"31 Jul","temp_mean":128.2,"temp_max":134.8,"temp_min":123.3,"z_mean":-0.2,"z_max":0.49,"flow_mean":259.8,"flow_max":491.6},{"label":"01 Aug","temp_mean":129.2,"temp_max":134.8,"temp_min":124.7,"z_mean":0.23,"z_max":0.49,"flow_mean":286.4,"flow_max":471.3}],"corr_mean":0.427,"corr_max":0.43,"corr_n":10,"excluded_cold_labels":["26 Jul","27 Jul","29 Jul"],"extended_window":[{"label":"26 Jul","is_idle":false,"abnormal":false,"points":[{"t":"2026-07-26T09:40:00","flow":203.5,"temp":36.5},{"t":"2026-07-26T09:50:00","flow":203.1,"temp":36.5},{"t":"2026-07-26T10:00:00","flow":203.2,"temp":36.5},{"t":"2026-07-26T10:10:00","flow":203.3,"temp":36.5},{"t":"2026-07-26T10:20:00","flow":203.6,"temp":36.5},{"t":"2026-07-26T10:30:00","flow":203.4,"temp":36.5},{"t":"2026-07-26T10:40:00","flow":203.3,"temp":36.5},{"t":"2026-07-26T10:50:00","flow":203.3,"temp":36.5},{"t":"2026-07-26T11:00:00","flow":203.4,"temp":36.5},{"t":"2026-07-26T11:10:00","flow":203.1,"temp":36.5},{"t":"2026-07-26T11:20:00","flow":203.3,"temp":36.5},{"t":"2026-07-26T11:30:00","flow":203.4,"temp":36.5},{"t":"2026-07-26T11:40:00","flow":203.4,"temp":36.5},{"t":"2026-07-26T11:50:00","flow":203.4,"temp":36.5},{"t":"2026-07-26T12:00:00","flow":203.3,"temp":36.5},{"t":"2026-07-26T12:10:00","flow":203.5,"temp":36.5},{"t":"2026-07-26T12:20:00","flow":203.3,"temp":36.5},{"t":"2026-07-26T12:30:00","flow":203.4,"temp":36.5},{"t":"2026-07-26T12:40:00","flow":203.5,"temp":36.5},{"t":"2026-07-26T12:50:00","flow":203.3,"temp":36.5},{"t":"2026-07-26T13:00:00","flow":203.3,"temp":36.5},{"t":"2026-07-26T13:10:00","flow":203.3,"temp":36.5},{"t":"2026-07-26T13:20:00","flow":203.2,"temp":36.5},{"t":"2026-07-26T13:30:00","flow":203.5,"temp":36.5},{"t":"2026-07-26T13:40:00","flow":203.6,"temp":36.6},{"t":"2026-07-26T13:50:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T14:00:00","flow":203.6,"temp":36.6},{"t":"2026-07-26T14:10:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T14:20:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T14:30:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T14:40:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T14:50:00","flow":203.9,"temp":36.6},{"t":"2026-07-26T15:00:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T15:10:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T15:20:00","flow":203.5,"temp":36.6},{"t":"2026-07-26T15:30:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T15:40:00","flow":203.7,"temp":36.6},{"t":"2026-07-26T15:50:00","flow":203.9,"temp":36.6},{"t":"2026-07-26T16:00:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T16:10:00","flow":203.6,"temp":36.5},{"t":"2026-07-26T16:20:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T16:30:00","flow":203.8,"temp":36.5},{"t":"2026-07-26T16:40:00","flow":203.9,"temp":36.6},{"t":"2026-07-26T16:50:00","flow":204.2,"temp":36.6},{"t":"2026-07-26T17:00:00","flow":203.9,"temp":36.6},{"t":"2026-07-26T17:10:00","flow":204.0,"temp":36.6},{"t":"2026-07-26T17:20:00","flow":203.9,"temp":36.6},{"t":"2026-07-26T17:30:00","flow":203.7,"temp":36.6},{"t":"2026-07-26T17:40:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T17:50:00","flow":204.0,"temp":36.6},{"t":"2026-07-26T18:00:00","flow":203.9,"temp":36.6},{"t":"2026-07-26T18:10:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T18:20:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T18:30:00","flow":203.7,"temp":36.6},{"t":"2026-07-26T18:40:00","flow":203.6,"temp":36.6},{"t":"2026-07-26T18:50:00","flow":203.6,"temp":36.6},{"t":"2026-07-26T19:00:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T19:10:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T19:20:00","flow":203.7,"temp":36.6},{"t":"2026-07-26T19:30:00","flow":203.8,"temp":36.6},{"t":"2026-07-26T19:40:00","flow":203.7,"temp":36.6},{"t":"2026-07-26T19:50:00","flow":203.5,"temp":36.6},{"t":"2026-07-26T20:00:00","flow":203.7,"temp":36.6}]},{"label":"27 Jul","is_idle":true,"abnormal":false,"points":[{"t":"2026-07-27T08:42:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T08:44:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T08:46:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T08:48:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T08:50:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T08:52:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T08:54:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T08:56:00","flow":0.1,"temp":36.4},{"t":"2026-07-27T08:58:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T09:00:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T09:02:00","flow":0.1,"temp":36.3},{"t":"2026-07-27T09:04:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:06:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:08:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:10:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T09:12:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:14:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:16:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:18:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:20:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T09:22:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:24:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:26:00","flow":0.1,"temp":36.3},{"t":"2026-07-27T09:28:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:30:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T09:32:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:34:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:36:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:38:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:40:00","flow":0.1,"temp":36.3},{"t":"2026-07-27T09:42:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:44:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:46:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:48:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:50:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:52:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:54:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:56:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T09:58:00","flow":0.1,"temp":36.3},{"t":"2026-07-27T10:00:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:02:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:04:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:06:00","flow":0.1,"temp":36.4},{"t":"2026-07-27T10:08:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:10:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:12:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:14:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:16:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T10:18:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:20:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:22:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:24:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:26:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:28:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:30:00","flow":0.1,"temp":36.3},{"t":"2026-07-27T10:32:00","flow":0.1,"temp":36.3},{"t":"2026-07-27T10:34:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:36:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:38:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:40:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:42:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:44:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:46:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T10:48:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:50:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:52:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:54:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:56:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T10:58:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:00:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:02:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:04:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:06:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:08:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:10:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:12:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:14:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:16:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:18:00","flow":-0.0,"temp":36.3},{"t":"2026-07-27T11:20:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:22:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:24:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T11:26:00","flow":6.0,"temp":36.3},{"t":"2026-07-27T11:28:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:30:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:32:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T11:34:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:36:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:38:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T11:40:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:42:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:44:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:46:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T11:48:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T11:50:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:52:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:54:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T11:56:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T11:58:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:00:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:02:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T12:04:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:06:00","flow":-0.0,"temp":36.3},{"t":"2026-07-27T12:08:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:10:00","flow":-0.0,"temp":36.3},{"t":"2026-07-27T12:12:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:14:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:16:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T12:18:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:20:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:22:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:24:00","flow":0.1,"temp":36.3},{"t":"2026-07-27T12:26:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:28:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:30:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:32:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:34:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:36:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:38:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T12:40:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:42:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:44:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:46:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T12:48:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:50:00","flow":-0.0,"temp":36.3},{"t":"2026-07-27T12:52:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T12:54:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:56:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T12:58:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T13:00:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:02:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T13:04:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T13:06:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:08:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:10:00","flow":0.1,"temp":36.3},{"t":"2026-07-27T13:12:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T13:14:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:16:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:18:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T13:20:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:22:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:24:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T13:26:00","flow":0.1,"temp":36.3},{"t":"2026-07-27T13:28:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:30:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:32:00","flow":-0.0,"temp":36.3},{"t":"2026-07-27T13:34:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:36:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:38:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:40:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:42:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:44:00","flow":0.1,"temp":36.4},{"t":"2026-07-27T13:46:00","flow":-0.0,"temp":36.4},{"t":"2026-07-27T13:48:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:50:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:52:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T13:54:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:56:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T13:58:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:00:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T14:02:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:04:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:06:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:08:00","flow":0.1,"temp":36.4},{"t":"2026-07-27T14:10:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:12:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T14:14:00","flow":0.1,"temp":36.3},{"t":"2026-07-27T14:16:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:18:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:20:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T14:22:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:24:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:26:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:28:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T14:30:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:32:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:34:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T14:36:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:38:00","flow":0.1,"temp":36.4},{"t":"2026-07-27T14:40:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:42:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T14:44:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:46:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:48:00","flow":-0.0,"temp":36.3},{"t":"2026-07-27T14:50:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:52:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:54:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T14:56:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T14:58:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:00:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:02:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T15:04:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:06:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:08:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T15:10:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T15:12:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:14:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:16:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:18:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:20:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:22:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T15:24:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T15:26:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:28:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T15:30:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T15:32:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:34:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:36:00","flow":0.6,"temp":36.3},{"t":"2026-07-27T15:38:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:40:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:42:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:44:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T15:46:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:48:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:50:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T15:52:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:54:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:56:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T15:58:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T16:00:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T16:02:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T16:04:00","flow":-0.0,"temp":36.3},{"t":"2026-07-27T16:06:00","flow":0.0,"temp":36.4},{"t":"2026-07-27T16:08:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T16:10:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T16:12:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T16:14:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T16:16:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T16:18:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T16:20:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T16:22:00","flow":-0.0,"temp":36.3},{"t":"2026-07-27T16:24:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T16:26:00","flow":0.0,"temp":36.2},{"t":"2026-07-27T16:28:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T16:30:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T16:32:00","flow":0.0,"temp":36.2},{"t":"2026-07-27T16:34:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T16:36:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T16:38:00","flow":0.1,"temp":36.3},{"t":"2026-07-27T16:40:00","flow":0.0,"temp":36.2},{"t":"2026-07-27T16:42:00","flow":0.0,"temp":36.2},{"t":"2026-07-27T16:44:00","flow":0.0,"temp":36.3},{"t":"2026-07-27T16:46:00","flow":0.0,"temp":36.2},{"t":"2026-07-27T16:48:00","flow":0.0,"temp":36.2},{"t":"2026-07-27T16:50:00","flow":0.0,"temp":36.2},{"t":"2026-07-27T16:52:00","flow":0.0,"temp":36.2}]},{"label":"29 Jul","is_idle":true,"abnormal":false,"points":[{"t":"2026-07-29T09:36:00","flow":-25.0,"temp":1.3},{"t":"2026-07-29T09:38:00","flow":-25.0,"temp":-3.4},{"t":"2026-07-29T09:40:00","flow":-25.0,"temp":-8.8}]},{"label":"30 Jul","is_idle":false,"abnormal":true,"points":[{"t":"2026-07-30T18:10:00","flow":233.9,"temp":127.7},{"t":"2026-07-30T18:20:00","flow":233.9,"temp":128.7},{"t":"2026-07-30T18:30:00","flow":233.7,"temp":129.8},{"t":"2026-07-30T18:40:00","flow":233.9,"temp":130.7},{"t":"2026-07-30T18:50:00","flow":233.8,"temp":131.4},{"t":"2026-07-30T19:00:00","flow":370.3,"temp":131.6},{"t":"2026-07-30T19:10:00","flow":286.4,"temp":127.6},{"t":"2026-07-30T19:20:00","flow":234.2,"temp":123.9},{"t":"2026-07-30T19:30:00","flow":234.3,"temp":123.5},{"t":"2026-07-30T19:40:00","flow":234.0,"temp":124.5},{"t":"2026-07-30T19:50:00","flow":234.1,"temp":125.8},{"t":"2026-07-30T20:00:00","flow":233.9,"temp":127.0},{"t":"2026-07-30T20:10:00","flow":234.0,"temp":128.2},{"t":"2026-07-30T20:20:00","flow":234.1,"temp":129.3},{"t":"2026-07-30T20:30:00","flow":234.0,"temp":130.3},{"t":"2026-07-30T20:40:00","flow":234.1,"temp":131.1},{"t":"2026-07-30T20:50:00","flow":253.2,"temp":131.6},{"t":"2026-07-30T21:00:00","flow":400.5,"temp":130.1},{"t":"2026-07-30T21:10:00","flow":235.1,"temp":125.0},{"t":"2026-07-30T21:20:00","flow":234.1,"temp":123.4},{"t":"2026-07-30T21:30:00","flow":234.1,"temp":123.9},{"t":"2026-07-30T21:40:00","flow":234.1,"temp":125.3},{"t":"2026-07-30T21:50:00","flow":234.1,"temp":126.6},{"t":"2026-07-30T22:00:00","flow":234.0,"temp":127.8},{"t":"2026-07-30T22:10:00","flow":233.7,"temp":128.9},{"t":"2026-07-30T22:20:00","flow":233.7,"temp":130.0},{"t":"2026-07-30T22:30:00","flow":233.8,"temp":130.9},{"t":"2026-07-30T22:40:00","flow":234.2,"temp":131.5},{"t":"2026-07-30T22:50:00","flow":418.0,"temp":131.0},{"t":"2026-07-30T23:00:00","flow":235.5,"temp":125.9},{"t":"2026-07-30T23:10:00","flow":234.3,"temp":123.6},{"t":"2026-07-30T23:20:00","flow":233.8,"temp":123.8},{"t":"2026-07-30T23:30:00","flow":234.0,"temp":125.0},{"t":"2026-07-30T23:40:00","flow":234.1,"temp":126.3},{"t":"2026-07-30T23:50:00","flow":234.2,"temp":127.4},{"t":"2026-07-31T00:00:00","flow":234.1,"temp":128.6},{"t":"2026-07-31T00:10:00","flow":234.1,"temp":129.7},{"t":"2026-07-31T00:20:00","flow":234.1,"temp":130.7},{"t":"2026-07-31T00:30:00","flow":234.0,"temp":131.4},{"t":"2026-07-31T00:40:00","flow":394.4,"temp":131.5},{"t":"2026-07-31T00:50:00","flow":255.2,"temp":127.1},{"t":"2026-07-31T01:00:00","flow":234.3,"temp":124.0},{"t":"2026-07-31T01:10:00","flow":234.0,"temp":123.8},{"t":"2026-07-31T01:20:00","flow":234.0,"temp":124.9},{"t":"2026-07-31T01:30:00","flow":234.0,"temp":126.2},{"t":"2026-07-31T01:40:00","flow":234.2,"temp":127.4},{"t":"2026-07-31T01:50:00","flow":234.0,"temp":128.5},{"t":"2026-07-31T02:00:00","flow":234.2,"temp":129.6},{"t":"2026-07-31T02:10:00","flow":234.2,"temp":130.6},{"t":"2026-07-31T02:20:00","flow":234.2,"temp":131.3},{"t":"2026-07-31T02:30:00","flow":398.6,"temp":131.4},{"t":"2026-07-31T02:40:00","flow":250.6,"temp":127.1},{"t":"2026-07-31T02:50:00","flow":234.3,"temp":124.0},{"t":"2026-07-31T03:00:00","flow":234.1,"temp":123.8},{"t":"2026-07-31T03:10:00","flow":234.0,"temp":125.0},{"t":"2026-07-31T03:20:00","flow":234.2,"temp":126.2},{"t":"2026-07-31T03:30:00","flow":234.0,"temp":127.4},{"t":"2026-07-31T03:40:00","flow":233.9,"temp":128.5},{"t":"2026-07-31T03:50:00","flow":233.7,"temp":129.6},{"t":"2026-07-31T04:00:00","flow":234.1,"temp":130.6},{"t":"2026-07-31T04:10:00","flow":234.2,"temp":131.4},{"t":"2026-07-31T04:20:00","flow":396.3,"temp":131.5},{"t":"2026-07-31T04:30:00","flow":254.3,"temp":127.1},{"t":"2026-07-31T04:40:00","flow":234.2,"temp":124.0},{"t":"2026-07-31T04:50:00","flow":233.9,"temp":123.8},{"t":"2026-07-31T05:00:00","flow":233.8,"temp":125.0},{"t":"2026-07-31T05:10:00","flow":234.2,"temp":126.2},{"t":"2026-07-31T05:20:00","flow":234.0,"temp":127.4},{"t":"2026-07-31T05:30:00","flow":234.0,"temp":128.5},{"t":"2026-07-31T05:40:00","flow":234.1,"temp":129.6},{"t":"2026-07-31T05:50:00","flow":233.9,"temp":130.6},{"t":"2026-07-31T06:00:00","flow":233.8,"temp":131.4},{"t":"2026-07-31T06:10:00","flow":411.6,"temp":130.5},{"t":"2026-07-31T06:20:00","flow":235.4,"temp":125.6},{"t":"2026-07-31T06:30:00","flow":234.2,"temp":123.8},{"t":"2026-07-31T06:40:00","flow":234.4,"temp":124.3},{"t":"2026-07-31T06:50:00","flow":234.0,"temp":125.6},{"t":"2026-07-31T07:00:00","flow":234.1,"temp":126.8},{"t":"2026-07-31T07:10:00","flow":234.2,"temp":127.9},{"t":"2026-07-31T07:20:00","flow":234.2,"temp":129.0},{"t":"2026-07-31T07:30:00","flow":234.0,"temp":130.1},{"t":"2026-07-31T07:40:00","flow":233.9,"temp":131.0},{"t":"2026-07-31T07:50:00","flow":285.4,"temp":131.6},{"t":"2026-07-31T08:00:00","flow":363.6,"temp":129.5},{"t":"2026-07-31T08:10:00","flow":235.6,"temp":124.9},{"t":"2026-07-31T08:20:00","flow":234.4,"temp":123.7},{"t":"2026-07-31T08:30:00","flow":234.3,"temp":124.5},{"t":"2026-07-31T08:40:00","flow":234.2,"temp":125.8},{"t":"2026-07-31T08:50:00","flow":234.1,"temp":127.0},{"t":"2026-07-31T09:00:00","flow":234.5,"temp":128.1},{"t":"2026-07-31T09:10:00","flow":234.1,"temp":129.2},{"t":"2026-07-31T09:20:00","flow":234.0,"temp":130.2},{"t":"2026-07-31T09:30:00","flow":234.2,"temp":131.1},{"t":"2026-07-31T09:40:00","flow":233.8,"temp":131.5},{"t":"2026-07-31T09:50:00","flow":383.2,"temp":130.9},{"t":"2026-07-31T10:00:00","flow":235.5,"temp":125.8},{"t":"2026-07-31T10:10:00","flow":234.0,"temp":125.1},{"t":"2026-07-31T10:20:00","flow":234.0,"temp":126.3},{"t":"2026-07-31T10:30:00","flow":234.3,"temp":127.5},{"t":"2026-07-31T10:40:00","flow":233.9,"temp":128.7},{"t":"2026-07-31T10:50:00","flow":234.1,"temp":129.8},{"t":"2026-07-31T11:00:00","flow":234.0,"temp":130.7},{"t":"2026-07-31T11:10:00","flow":234.0,"temp":131.4},{"t":"2026-07-31T11:20:00","flow":408.9,"temp":131.4},{"t":"2026-07-31T11:30:00","flow":251.2,"temp":126.8},{"t":"2026-07-31T11:40:00","flow":239.4,"temp":123.7},{"t":"2026-07-31T11:50:00","flow":239.4,"temp":123.6},{"t":"2026-07-31T12:00:00","flow":238.9,"temp":124.8},{"t":"2026-07-31T12:10:00","flow":239.4,"temp":126.1},{"t":"2026-07-31T12:20:00","flow":238.5,"temp":127.3},{"t":"2026-07-31T12:30:00","flow":234.1,"temp":128.5},{"t":"2026-07-31T12:40:00","flow":234.2,"temp":129.6},{"t":"2026-07-31T12:50:00","flow":234.1,"temp":130.5},{"t":"2026-07-31T13:00:00","flow":234.0,"temp":131.3},{"t":"2026-07-31T13:10:00","flow":324.8,"temp":131.7},{"t":"2026-07-31T13:20:00","flow":332.1,"temp":128.7},{"t":"2026-07-31T13:30:00","flow":239.2,"temp":124.2},{"t":"2026-07-31T13:40:00","flow":239.2,"temp":123.4},{"t":"2026-07-31T13:50:00","flow":238.9,"temp":124.4},{"t":"2026-07-31T14:00:00","flow":239.1,"temp":125.7},{"t":"2026-07-31T14:10:00","flow":239.1,"temp":126.9},{"t":"2026-07-31T14:20:00","flow":239.2,"temp":128.1},{"t":"2026-07-31T14:30:00","flow":237.8,"temp":129.2},{"t":"2026-07-31T14:40:00","flow":234.0,"temp":130.3},{"t":"2026-07-31T14:50:00","flow":233.8,"temp":131.0},{"t":"2026-07-31T15:00:00","flow":265.1,"temp":131.6},{"t":"2026-07-31T15:10:00","flow":390.2,"temp":129.9},{"t":"2026-07-31T15:20:00","flow":239.5,"temp":124.8},{"t":"2026-07-31T15:30:00","flow":239.1,"temp":123.4},{"t":"2026-07-31T15:40:00","flow":239.1,"temp":124.1},{"t":"2026-07-31T15:50:00","flow":239.0,"temp":125.5},{"t":"2026-07-31T16:00:00","flow":239.0,"temp":126.7},{"t":"2026-07-31T16:10:00","flow":239.1,"temp":127.9},{"t":"2026-07-31T16:20:00","flow":239.0,"temp":129.1},{"t":"2026-07-31T16:30:00","flow":238.8,"temp":130.2},{"t":"2026-07-31T16:40:00","flow":239.2,"temp":131.0},{"t":"2026-07-31T16:50:00","flow":238.3,"temp":131.5},{"t":"2026-07-31T17:00:00","flow":422.6,"temp":130.6},{"t":"2026-07-31T17:10:00","flow":239.5,"temp":125.4},{"t":"2026-07-31T17:20:00","flow":239.3,"temp":123.5},{"t":"2026-07-31T17:30:00","flow":239.1,"temp":124.0},{"t":"2026-07-31T17:40:00","flow":239.2,"temp":125.3},{"t":"2026-07-31T17:50:00","flow":239.2,"temp":126.6},{"t":"2026-07-31T18:00:00","flow":238.9,"temp":127.7},{"t":"2026-07-31T18:10:00","flow":238.8,"temp":128.5}]},{"label":"31 Jul","is_idle":false,"abnormal":true,"points":[{"t":"2026-07-31T18:10:00","flow":238.9,"temp":129.1},{"t":"2026-07-31T18:20:00","flow":235.4,"temp":130.0},{"t":"2026-07-31T18:30:00","flow":234.1,"temp":130.9},{"t":"2026-07-31T18:40:00","flow":234.1,"temp":131.5},{"t":"2026-07-31T18:50:00","flow":422.0,"temp":130.6},{"t":"2026-07-31T19:00:00","flow":239.5,"temp":125.4},{"t":"2026-07-31T19:10:00","flow":239.1,"temp":123.5},{"t":"2026-07-31T19:20:00","flow":239.2,"temp":124.0},{"t":"2026-07-31T19:30:00","flow":239.2,"temp":125.3},{"t":"2026-07-31T19:40:00","flow":239.3,"temp":126.6},{"t":"2026-07-31T19:50:00","flow":239.3,"temp":127.7},{"t":"2026-07-31T20:00:00","flow":239.2,"temp":128.9},{"t":"2026-07-31T20:10:00","flow":239.3,"temp":130.0},{"t":"2026-07-31T20:20:00","flow":239.3,"temp":130.9},{"t":"2026-07-31T20:30:00","flow":238.4,"temp":131.5},{"t":"2026-07-31T20:40:00","flow":422.7,"temp":130.6},{"t":"2026-07-31T20:50:00","flow":239.6,"temp":125.5},{"t":"2026-07-31T21:00:00","flow":239.1,"temp":123.5},{"t":"2026-07-31T21:10:00","flow":239.2,"temp":124.0},{"t":"2026-07-31T21:20:00","flow":239.1,"temp":125.3},{"t":"2026-07-31T21:30:00","flow":239.3,"temp":126.6},{"t":"2026-07-31T21:40:00","flow":239.2,"temp":127.7},{"t":"2026-07-31T21:50:00","flow":239.5,"temp":128.9},{"t":"2026-07-31T22:00:00","flow":237.4,"temp":130.0},{"t":"2026-07-31T22:10:00","flow":234.2,"temp":130.9},{"t":"2026-07-31T22:20:00","flow":273.9,"temp":131.6},{"t":"2026-07-31T22:30:00","flow":381.7,"temp":129.8},{"t":"2026-07-31T22:40:00","flow":239.5,"temp":124.9},{"t":"2026-07-31T22:50:00","flow":239.6,"temp":123.5},{"t":"2026-07-31T23:00:00","flow":239.3,"temp":124.3},{"t":"2026-07-31T23:10:00","flow":239.3,"temp":125.7},{"t":"2026-07-31T23:20:00","flow":239.0,"temp":126.9},{"t":"2026-07-31T23:30:00","flow":239.3,"temp":128.1},{"t":"2026-07-31T23:40:00","flow":236.1,"temp":129.2},{"t":"2026-07-31T23:50:00","flow":234.4,"temp":130.3},{"t":"2026-08-01T00:00:00","flow":234.2,"temp":131.2},{"t":"2026-08-01T00:10:00","flow":336.2,"temp":131.6},{"t":"2026-08-01T00:20:00","flow":322.6,"temp":128.4},{"t":"2026-08-01T00:30:00","flow":239.5,"temp":124.2},{"t":"2026-08-01T00:40:00","flow":239.4,"temp":123.6},{"t":"2026-08-01T00:50:00","flow":239.3,"temp":124.7},{"t":"2026-08-01T01:00:00","flow":239.1,"temp":126.0},{"t":"2026-08-01T01:10:00","flow":239.3,"temp":127.2},{"t":"2026-08-01T01:20:00","flow":239.2,"temp":128.3},{"t":"2026-08-01T01:30:00","flow":234.6,"temp":129.5},{"t":"2026-08-01T01:40:00","flow":234.5,"temp":130.5},{"t":"2026-08-01T01:50:00","flow":234.2,"temp":131.2},{"t":"2026-08-01T02:00:00","flow":392.2,"temp":131.4},{"t":"2026-08-01T02:10:00","flow":267.0,"temp":127.1},{"t":"2026-08-01T02:20:00","flow":239.6,"temp":123.8},{"t":"2026-08-01T02:30:00","flow":239.4,"temp":123.6},{"t":"2026-08-01T02:40:00","flow":239.1,"temp":124.8},{"t":"2026-08-01T02:50:00","flow":238.7,"temp":126.1},{"t":"2026-08-01T03:00:00","flow":234.4,"temp":127.3},{"t":"2026-08-01T03:10:00","flow":234.6,"temp":128.5},{"t":"2026-08-01T03:20:00","flow":234.2,"temp":129.6},{"t":"2026-08-01T03:30:00","flow":234.2,"temp":130.6},{"t":"2026-08-01T03:40:00","flow":234.3,"temp":131.3},{"t":"2026-08-01T03:50:00","flow":390.9,"temp":131.5},{"t":"2026-08-01T04:00:00","flow":268.0,"temp":127.1},{"t":"2026-08-01T04:10:00","flow":239.3,"temp":123.8},{"t":"2026-08-01T04:20:00","flow":239.3,"temp":123.7},{"t":"2026-08-01T04:30:00","flow":238.1,"temp":124.9},{"t":"2026-08-01T04:40:00","flow":234.3,"temp":126.2},{"t":"2026-08-01T04:50:00","flow":234.3,"temp":127.4},{"t":"2026-08-01T05:00:00","flow":234.2,"temp":128.7},{"t":"2026-08-01T05:10:00","flow":234.1,"temp":130.1},{"t":"2026-08-01T05:20:00","flow":225.2,"temp":131.4},{"t":"2026-08-01T05:30:00","flow":186.1,"temp":129.4},{"t":"2026-08-01T05:40:00","flow":230.7,"temp":127.9},{"t":"2026-08-01T05:50:00","flow":231.1,"temp":129.3},{"t":"2026-08-01T06:00:00","flow":230.9,"temp":130.6},{"t":"2026-08-01T06:10:00","flow":309.9,"temp":131.6},{"t":"2026-08-01T06:20:00","flow":301.0,"temp":128.0},{"t":"2026-08-01T06:30:00","flow":236.8,"temp":125.0},{"t":"2026-08-01T06:40:00","flow":236.4,"temp":126.1},{"t":"2026-08-01T06:50:00","flow":236.5,"temp":127.7},{"t":"2026-08-01T07:00:00","flow":236.1,"temp":129.5},{"t":"2026-08-01T07:10:00","flow":235.0,"temp":130.9},{"t":"2026-08-01T07:20:00","flow":379.7,"temp":130.2},{"t":"2026-08-01T07:30:00","flow":236.6,"temp":125.6},{"t":"2026-08-01T07:40:00","flow":236.3,"temp":125.6},{"t":"2026-08-01T07:50:00","flow":236.0,"temp":127.1},{"t":"2026-08-01T08:00:00","flow":235.6,"temp":128.8},{"t":"2026-08-01T08:10:00","flow":235.8,"temp":130.4},{"t":"2026-08-01T08:20:00","flow":316.7,"temp":131.6},{"t":"2026-08-01T08:30:00","flow":306.5,"temp":128.1},{"t":"2026-08-01T08:40:00","flow":236.2,"temp":125.0},{"t":"2026-08-01T08:50:00","flow":236.0,"temp":125.9},{"t":"2026-08-01T09:00:00","flow":236.2,"temp":127.6},{"t":"2026-08-01T09:10:00","flow":236.0,"temp":129.2},{"t":"2026-08-01T09:20:00","flow":236.0,"temp":130.7},{"t":"2026-08-01T09:30:00","flow":380.1,"temp":130.8},{"t":"2026-08-01T09:40:00","flow":235.8,"temp":126.0},{"t":"2026-08-01T09:50:00","flow":235.6,"temp":125.5},{"t":"2026-08-01T10:00:00","flow":235.5,"temp":126.9},{"t":"2026-08-01T10:10:00","flow":235.5,"temp":128.6},{"t":"2026-08-01T10:20:00","flow":235.4,"temp":130.3},{"t":"2026-08-01T10:30:00","flow":382.2,"temp":131.2},{"t":"2026-08-01T10:40:00","flow":237.3,"temp":126.9},{"t":"2026-08-01T10:50:00","flow":235.7,"temp":125.1},{"t":"2026-08-01T11:00:00","flow":235.8,"temp":126.3},{"t":"2026-08-01T11:10:00","flow":235.8,"temp":128.0},{"t":"2026-08-01T11:20:00","flow":235.8,"temp":129.7},{"t":"2026-08-01T11:30:00","flow":239.5,"temp":131.1},{"t":"2026-08-01T11:40:00","flow":371.4,"temp":129.8},{"t":"2026-08-01T11:50:00","flow":236.0,"temp":125.5},{"t":"2026-08-01T12:00:00","flow":235.6,"temp":125.9},{"t":"2026-08-01T12:10:00","flow":235.5,"temp":127.6},{"t":"2026-08-01T12:20:00","flow":235.4,"temp":129.3},{"t":"2026-08-01T12:30:00","flow":235.5,"temp":130.8},{"t":"2026-08-01T12:40:00","flow":371.2,"temp":130.3},{"t":"2026-08-01T12:50:00","flow":236.0,"temp":125.9},{"t":"2026-08-01T13:00:00","flow":235.9,"temp":125.9},{"t":"2026-08-01T13:10:00","flow":235.7,"temp":127.5},{"t":"2026-08-01T13:20:00","flow":235.7,"temp":129.2},{"t":"2026-08-01T13:30:00","flow":235.7,"temp":130.8},{"t":"2026-08-01T13:40:00","flow":370.1,"temp":130.0},{"t":"2026-08-01T13:50:00","flow":236.0,"temp":125.7},{"t":"2026-08-01T14:00:00","flow":235.7,"temp":126.0},{"t":"2026-08-01T14:10:00","flow":235.8,"temp":127.6},{"t":"2026-08-01T14:20:00","flow":235.8,"temp":129.3},{"t":"2026-08-01T14:30:00","flow":236.0,"temp":130.8},{"t":"2026-08-01T14:40:00","flow":371.8,"temp":130.1},{"t":"2026-08-01T14:50:00","flow":235.8,"temp":125.7},{"t":"2026-08-01T15:00:00","flow":235.9,"temp":125.9},{"t":"2026-08-01T15:10:00","flow":254.4,"temp":128.4},{"t":"2026-08-01T15:20:00","flow":387.0,"temp":130.5},{"t":"2026-08-01T15:30:00","flow":236.0,"temp":128.8},{"t":"2026-08-01T15:40:00","flow":235.7,"temp":130.8},{"t":"2026-08-01T15:50:00","flow":427.4,"temp":133.3},{"t":"2026-08-01T16:00:00","flow":301.8,"temp":129.8},{"t":"2026-08-01T16:10:00","flow":235.7,"temp":128.0},{"t":"2026-08-01T16:20:00","flow":257.6,"temp":129.7},{"t":"2026-08-01T16:30:00","flow":409.2,"temp":130.9},{"t":"2026-08-01T16:40:00","flow":236.0,"temp":128.1},{"t":"2026-08-01T16:50:00","flow":236.1,"temp":128.7},{"t":"2026-08-01T17:00:00","flow":362.8,"temp":131.5},{"t":"2026-08-01T17:10:00","flow":323.7,"temp":129.7},{"t":"2026-08-01T17:20:00","flow":235.1,"temp":127.7},{"t":"2026-08-01T17:30:00","flow":235.1,"temp":129.5},{"t":"2026-08-01T17:40:00","flow":436.5,"temp":131.6},{"t":"2026-08-01T17:50:00","flow":235.4,"temp":128.5},{"t":"2026-08-01T18:00:00","flow":235.0,"temp":128.1},{"t":"2026-08-01T18:10:00","flow":234.9,"temp":129.3}]},{"label":"01 Aug","is_idle":false,"abnormal":true,"points":[{"t":"2026-08-01T18:10:00","flow":338.2,"temp":130.8},{"t":"2026-08-01T18:20:00","flow":363.0,"temp":130.2},{"t":"2026-08-01T18:30:00","flow":235.0,"temp":127.8},{"t":"2026-08-01T18:40:00","flow":234.8,"temp":129.0},{"t":"2026-08-01T18:50:00","flow":393.5,"temp":131.2},{"t":"2026-08-01T19:00:00","flow":268.7,"temp":129.0},{"t":"2026-08-01T19:10:00","flow":235.0,"temp":127.8},{"t":"2026-08-01T19:20:00","flow":243.6,"temp":129.4},{"t":"2026-08-01T19:30:00","flow":402.7,"temp":130.6},{"t":"2026-08-01T19:40:00","flow":235.2,"temp":128.8},{"t":"2026-08-01T19:50:00","flow":235.0,"temp":129.6},{"t":"2026-08-01T20:00:00","flow":374.3,"temp":132.2},{"t":"2026-08-01T20:10:00","flow":331.9,"temp":129.9},{"t":"2026-08-01T20:20:00","flow":235.1,"temp":126.7},{"t":"2026-08-01T20:30:00","flow":235.0,"temp":127.7},{"t":"2026-08-01T20:40:00","flow":337.3,"temp":131.1},{"t":"2026-08-01T20:50:00","flow":410.2,"temp":130.3},{"t":"2026-08-01T21:00:00","flow":235.1,"temp":126.0},{"t":"2026-08-01T21:10:00","flow":234.9,"temp":126.0},{"t":"2026-08-01T21:20:00","flow":234.9,"temp":128.3},{"t":"2026-08-01T21:30:00","flow":255.4,"temp":131.4},{"t":"2026-08-01T21:40:00","flow":467.0,"temp":133.3},{"t":"2026-08-01T21:50:00","flow":241.8,"temp":129.0},{"t":"2026-08-01T22:00:00","flow":235.2,"temp":127.8},{"t":"2026-08-01T22:10:00","flow":278.2,"temp":129.5},{"t":"2026-08-01T22:20:00","flow":358.8,"temp":130.0},{"t":"2026-08-01T22:30:00","flow":235.2,"temp":127.8},{"t":"2026-08-01T22:40:00","flow":234.9,"temp":129.2},{"t":"2026-08-01T22:50:00","flow":408.5,"temp":131.4},{"t":"2026-08-01T23:00:00","flow":259.9,"temp":128.8},{"t":"2026-08-01T23:10:00","flow":235.3,"temp":127.6},{"t":"2026-08-01T23:20:00","flow":253.3,"temp":129.3},{"t":"2026-08-01T23:30:00","flow":391.1,"temp":130.4},{"t":"2026-08-01T23:40:00","flow":235.2,"temp":128.2},{"t":"2026-08-01T23:50:00","flow":235.2,"temp":128.6},{"t":"2026-08-02T00:00:00","flow":349.2,"temp":130.7},{"t":"2026-08-02T00:10:00","flow":297.8,"temp":129.3},{"t":"2026-08-02T00:20:00","flow":235.1,"temp":128.2},{"t":"2026-08-02T00:30:00","flow":235.8,"temp":130.2},{"t":"2026-08-02T00:40:00","flow":439.9,"temp":131.6},{"t":"2026-08-02T00:50:00","flow":235.5,"temp":127.8},{"t":"2026-08-02T01:00:00","flow":234.9,"temp":127.4},{"t":"2026-08-02T01:10:00","flow":310.7,"temp":130.0},{"t":"2026-08-02T01:20:00","flow":349.0,"temp":130.1},{"t":"2026-08-02T01:30:00","flow":234.8,"temp":128.1},{"t":"2026-08-02T01:40:00","flow":234.8,"temp":129.2},{"t":"2026-08-02T01:50:00","flow":403.9,"temp":131.3},{"t":"2026-08-02T02:00:00","flow":251.4,"temp":128.8},{"t":"2026-08-02T02:10:00","flow":235.2,"temp":127.8},{"t":"2026-08-02T02:20:00","flow":256.5,"temp":129.6},{"t":"2026-08-02T02:30:00","flow":395.9,"temp":130.6},{"t":"2026-08-02T02:40:00","flow":235.4,"temp":128.2},{"t":"2026-08-02T02:50:00","flow":235.1,"temp":128.6},{"t":"2026-08-02T03:00:00","flow":355.6,"temp":130.8},{"t":"2026-08-02T03:10:00","flow":297.5,"temp":129.2},{"t":"2026-08-02T03:20:00","flow":234.9,"temp":127.5},{"t":"2026-08-02T03:30:00","flow":234.9,"temp":128.9},{"t":"2026-08-02T03:40:00","flow":404.8,"temp":130.9},{"t":"2026-08-02T03:50:00","flow":235.4,"temp":128.3},{"t":"2026-08-02T04:00:00","flow":235.0,"temp":128.1},{"t":"2026-08-02T04:10:00","flow":311.2,"temp":130.3},{"t":"2026-08-02T04:20:00","flow":335.3,"temp":129.6},{"t":"2026-08-02T04:30:00","flow":235.2,"temp":127.3},{"t":"2026-08-02T04:40:00","flow":235.4,"temp":128.7},{"t":"2026-08-02T04:50:00","flow":385.0,"temp":131.0},{"t":"2026-08-02T05:00:00","flow":256.3,"temp":129.1},{"t":"2026-08-02T05:10:00","flow":234.7,"temp":128.0},{"t":"2026-08-02T05:20:00","flow":272.9,"temp":129.9},{"t":"2026-08-02T05:30:00","flow":383.9,"temp":130.4},{"t":"2026-08-02T05:40:00","flow":234.9,"temp":127.7},{"t":"2026-08-02T05:50:00","flow":235.1,"temp":128.2},{"t":"2026-08-02T06:00:00","flow":337.1,"temp":130.5},{"t":"2026-08-02T06:10:00","flow":301.3,"temp":129.4},{"t":"2026-08-02T06:20:00","flow":235.2,"temp":127.6},{"t":"2026-08-02T06:30:00","flow":234.9,"temp":129.3},{"t":"2026-08-02T06:40:00","flow":420.4,"temp":131.1},{"t":"2026-08-02T06:50:00","flow":235.4,"temp":128.4},{"t":"2026-08-02T07:00:00","flow":235.0,"temp":128.3},{"t":"2026-08-02T07:10:00","flow":328.6,"temp":130.6},{"t":"2026-08-02T07:20:00","flow":340.1,"temp":129.8},{"t":"2026-08-02T07:30:00","flow":235.1,"temp":126.8},{"t":"2026-08-02T07:40:00","flow":234.9,"temp":127.8},{"t":"2026-08-02T07:50:00","flow":358.6,"temp":130.8},{"t":"2026-08-02T08:00:00","flow":270.1,"temp":130.1},{"t":"2026-08-02T08:10:00","flow":235.0,"temp":129.0},{"t":"2026-08-02T08:20:00","flow":277.2,"temp":130.2},{"t":"2026-08-02T08:30:00","flow":377.5,"temp":130.4},{"t":"2026-08-02T08:40:00","flow":235.1,"temp":128.4},{"t":"2026-08-02T08:50:00","flow":235.1,"temp":129.5},{"t":"2026-08-02T09:00:00","flow":378.9,"temp":131.4},{"t":"2026-08-02T09:10:00","flow":286.0,"temp":129.0},{"t":"2026-08-02T09:20:00","flow":235.3,"temp":127.3},{"t":"2026-08-02T09:30:00","flow":235.2,"temp":128.7},{"t":"2026-08-02T09:40:00","flow":394.2,"temp":130.7},{"t":"2026-08-02T09:50:00","flow":235.2,"temp":128.6},{"t":"2026-08-02T10:00:00","flow":234.9,"temp":128.6},{"t":"2026-08-02T10:10:00","flow":342.1,"temp":130.9},{"t":"2026-08-02T10:20:00","flow":328.1,"temp":129.5},{"t":"2026-08-02T10:30:00","flow":235.4,"temp":127.1},{"t":"2026-08-02T10:40:00","flow":235.1,"temp":128.6},{"t":"2026-08-02T10:50:00","flow":406.4,"temp":131.0},{"t":"2026-08-02T11:00:00","flow":235.4,"temp":128.7},{"t":"2026-08-02T11:10:00","flow":235.2,"temp":128.0},{"t":"2026-08-02T11:20:00","flow":291.4,"temp":130.0},{"t":"2026-08-02T11:30:00","flow":366.9,"temp":130.2},{"t":"2026-08-02T11:40:00","flow":235.2,"temp":127.8},{"t":"2026-08-02T11:50:00","flow":235.0,"temp":128.1},{"t":"2026-08-02T12:00:00","flow":235.0,"temp":129.7},{"t":"2026-08-02T12:10:00","flow":365.1,"temp":132.4},{"t":"2026-08-02T12:20:00","flow":342.1,"temp":130.4},{"t":"2026-08-02T12:30:00","flow":235.2,"temp":127.9},{"t":"2026-08-02T12:40:00","flow":235.2,"temp":128.5},{"t":"2026-08-02T12:50:00","flow":413.1,"temp":131.1},{"t":"2026-08-02T13:00:00","flow":235.5,"temp":128.9},{"t":"2026-08-02T13:10:00","flow":235.2,"temp":128.6},{"t":"2026-08-02T13:20:00","flow":304.6,"temp":130.8},{"t":"2026-08-02T13:30:00","flow":367.0,"temp":130.2},{"t":"2026-08-02T13:40:00","flow":235.4,"temp":127.3},{"t":"2026-08-02T13:50:00","flow":235.1,"temp":128.3},{"t":"2026-08-02T14:00:00","flow":372.3,"temp":130.7},{"t":"2026-08-02T14:10:00","flow":271.3,"temp":128.9},{"t":"2026-08-02T14:20:00","flow":235.0,"temp":127.7},{"t":"2026-08-02T14:30:00","flow":245.9,"temp":129.4},{"t":"2026-08-02T14:40:00","flow":409.8,"temp":130.8},{"t":"2026-08-02T14:50:00","flow":235.3,"temp":128.1},{"t":"2026-08-02T15:00:00","flow":235.0,"temp":128.3},{"t":"2026-08-02T15:10:00","flow":341.7,"temp":130.7},{"t":"2026-08-02T15:20:00","flow":321.5,"temp":129.5},{"t":"2026-08-02T15:30:00","flow":235.4,"temp":127.2},{"t":"2026-08-02T15:40:00","flow":234.9,"temp":128.5},{"t":"2026-08-02T15:50:00","flow":396.2,"temp":130.9},{"t":"2026-08-02T16:00:00","flow":235.0,"temp":128.8},{"t":"2026-08-02T16:10:00","flow":235.2,"temp":128.2},{"t":"2026-08-02T16:20:00","flow":295.4,"temp":130.0},{"t":"2026-08-02T16:30:00","flow":355.6,"temp":129.8},{"t":"2026-08-02T16:40:00","flow":235.2,"temp":127.4},{"t":"2026-08-02T16:50:00","flow":235.1,"temp":128.5},{"t":"2026-08-02T17:00:00","flow":383.4,"temp":130.8},{"t":"2026-08-02T17:10:00","flow":262.7,"temp":128.8},{"t":"2026-08-02T17:20:00","flow":235.2,"temp":127.7},{"t":"2026-08-02T17:30:00","flow":259.0,"temp":129.7},{"t":"2026-08-02T17:40:00","flow":405.5,"temp":130.9},{"t":"2026-08-02T17:50:00","flow":235.2,"temp":127.8},{"t":"2026-08-02T18:00:00","flow":234.9,"temp":128.2},{"t":"2026-08-02T18:10:00","flow":235.0,"temp":129.0}]}]}};
+
+const fmt1 = n => (Math.round(n*10)/10).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
+const fmt0 = n => Math.round(n).toLocaleString('en-US');
+const svgns = "http://www.w3.org/2000/svg";
+function el(tag, attrs){
+  const e = document.createElementNS(svgns, tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+const tt = document.getElementById('tt');
+function showTT(container, x, y, html){
+  const rect = container.getBoundingClientRect();
+  tt.innerHTML = html;
+  tt.style.left = (rect.left + window.scrollX + x) + 'px';
+  tt.style.top = (rect.top + window.scrollY + y) + 'px';
+  tt.style.opacity = '1';
+}
+function hideTT(){ tt.style.opacity = '0'; }
+
+const sessions = DATA.sessions;
+const baseline = DATA.baseline;
+const TH = DATA.thresholds; // {regulated_lo:200, regulated_hi:300, abnormal_hi:400}
+
+/* ---------------- classification ---------------- */
+function classify(s){
+  if(s.is_idle) return {key:'idle', label:'หยุด/บำรุงรักษา'};
+  if(s.abnormal) return {key:'abnormal', label:'Abnormal'};
+  if(s.pct_cooling + s.pct_abnormal >= 15) return {key:'cool', label:'Oil Cooling'};
+  return {key:'good', label:'Regulated (Control State)'};
+}
+const pillCls = {idle:'idle', abnormal:'crit', cool:'cool', good:'good'};
+sessions.forEach(s=> s._cat = classify(s).key);
+
+/* ---------------- KPI row ---------------- */
+const totalN = sessions.reduce((a,s)=>a+s.n,0);
+const weightedMean = sessions.reduce((a,s)=>a+s.mean*s.n,0)/totalN;
+const peakSession = sessions.reduce((a,s)=>s.max>a.max?s:a, sessions[0]);
+const abnormalCount = sessions.filter(s=>s.abnormal).length;
+const kpis = [
+  {lbl:'ช่วงเวลาบันทึกข้อมูล', val:'9 พ.ค. – 2 ส.ค.', sub:'2026 · 13 เซสชัน', cls:''},
+  {lbl:'ค่าเฉลี่ย baseline ปกติ', val: fmt1(baseline.mu_avg)+' ± '+fmt1(baseline.sd_avg), sub:'จาก '+baseline.n+' เซสชันอ้างอิง', cls:'flow'},
+  {lbl:'ค่าสูงสุดที่บันทึกได้', val: fmt1(peakSession.max)+' L/min', sub:'เซสชัน '+peakSession.label, cls:'accent'},
+  {lbl:'จุดข้อมูลที่วิเคราะห์', val: fmt0(totalN), sub:'จาก 13 ไฟล์ log', cls:''},
+  {lbl:'เซสชันที่พบ Abnormal', val: abnormalCount+' จาก 13', sub:'&gt;400 L/min อย่างน้อย 1 ครั้ง', cls:'crit'},
+];
+const kpiRow = document.getElementById('kpiRow');
+kpis.forEach(k=>{
+  const d = document.createElement('div');
+  d.className='kpi';
+  d.innerHTML = `<div class="lbl">${k.lbl}</div><div class="val ${k.cls}">${k.val}</div><div class="sub">${k.sub}</div>`;
+  kpiRow.appendChild(d);
+});
+
+/* ---------------- Bands breakdown: within "above 300" time, where does it peak? ---------------- */
+(function(){
+  const container = document.getElementById('chartBands');
+  const bb = DATA.band_breakdown;
+  bb.forEach(row=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'stack-row';
+    wrap.innerHTML = `
+      <div class="stack-label">${row.label}</div>
+      <div class="stack-track">
+        ${row.share_300_380_of_above>0 ? `<div class="stack-seg s300" style="width:${row.share_300_380_of_above}%" title="300-380 L/min: ${row.share_300_380_of_above}%"></div>` : ''}
+        ${row.share_380_400_of_above>0 ? `<div class="stack-seg s380" style="width:${row.share_380_400_of_above}%" title="380-400 L/min: ${row.share_380_400_of_above}%"></div>` : ''}
+        <div class="stack-seg s400" style="width:${row.share_gt400_of_above}%">${row.share_gt400_of_above}%</div>
+      </div>
+    `;
+    wrap.title = `${row.label}: จากเวลาที่ไหลเกิน 300 L/min ทั้งหมด (${row.above_total} จุด) — 300–380: ${row.share_300_380_of_above}% · 380–400: ${row.share_380_400_of_above}% · >400: ${row.share_gt400_of_above}%`;
+    container.appendChild(wrap);
+  });
+  const legend = document.createElement('div');
+  legend.className = 'stack-legend';
+  legend.innerHTML = `
+    <span class="legend-item"><span class="swatch" style="background:var(--flow)"></span>300–380 L/min (ปกติ)</span>
+    <span class="legend-item"><span class="swatch" style="background:var(--cool)"></span>380–400 L/min (คาบเส้น)</span>
+    <span class="legend-item"><span class="swatch" style="background:var(--critical)"></span>&gt;400 L/min (Abnormal)</span>
+  `;
+  container.appendChild(legend);
+  const note = document.createElement('div');
+  note.style.cssText = 'margin-top:12px;font-size:12px;color:var(--text-muted);line-height:1.6';
+  note.innerHTML = 'สัดส่วนคำนวณเฉพาะ "เวลาที่ไหลเกิน 300 L/min" ในแต่ละวัน (ไม่รวมช่วงที่อยู่ในระดับ Regulated ปกติ) เพื่อให้เห็นว่าเมื่อระบบเข้าสู่โหมด Cool down แล้ว มันไปสุดที่ระดับไหนเป็นส่วนใหญ่';
+  container.appendChild(note);
+})();
+
+/* ---------------- filter toolbar ---------------- */
+const FILTERS = [
+  {key:'all', label:'ทั้งหมด', color:'var(--text-secondary)'},
+  {key:'good', label:'Regulated', color:'var(--flow)'},
+  {key:'cool', label:'Oil Cooling', color:'var(--cool)'},
+  {key:'abnormal', label:'Abnormal', color:'var(--critical)'},
+  {key:'idle', label:'หยุด/บำรุงรักษา', color:'var(--idle)'},
+];
+let activeFilter = 'all';
+const toolbar = document.getElementById('filterToolbar');
+const filterListeners = [];
+function onFilterChange(fn){ filterListeners.push(fn); }
+function setFilter(key){
+  activeFilter = key;
+  [...toolbar.children].forEach(b=> b.classList.toggle('active', b.dataset.key===key));
+  filterListeners.forEach(fn=>fn(key));
+}
+FILTERS.forEach(f=>{
+  const count = f.key==='all' ? sessions.length : sessions.filter(s=>s._cat===f.key).length;
+  const btn = document.createElement('button');
+  btn.className = 'filter-btn' + (f.key==='all' ? ' active' : '');
+  btn.dataset.key = f.key;
+  btn.innerHTML = `<span class="fdot" style="background:${f.color}"></span>${f.label} <span class="count">${count}</span>`;
+  btn.addEventListener('click', ()=> setFilter(f.key));
+  toolbar.appendChild(btn);
+});
+
+/* ---------------- Chart 1: session trend (horizontal time trend) ---------------- */
+(function(){
+  const W = 1080, H = 380, M = {top:20,right:24,bottom:34,left:52};
+  const iw = W-M.left-M.right, ih = H-M.top-M.bottom;
+  const container = document.getElementById('chartSessions');
+  const svg = el('svg',{class:'chart', viewBox:`0 0 ${W} ${H}`});
+
+  const t0 = new Date(sessions[0].start).getTime();
+  const t1 = new Date(sessions[sessions.length-1].start).getTime();
+  const xScale = t => M.left + ( (t-t0)/(t1-t0) ) * iw;
+  const yMin = -40, yMax = 520;
+  const yScale = v => M.top + ih - ( (v-yMin)/(yMax-yMin) ) * ih;
+
+  // background bands: Regulated 200-300, Oil Cooling 300-400, Abnormal >400
+  svg.appendChild(el('rect',{x:M.left, y:yScale(TH.regulated_hi), width:iw, height:yScale(TH.regulated_lo)-yScale(TH.regulated_hi), class:'steady-band'}));
+  svg.appendChild(el('rect',{x:M.left, y:yScale(TH.abnormal_hi), width:iw, height:yScale(TH.regulated_hi)-yScale(TH.abnormal_hi), class:'cool-band'}));
+  svg.appendChild(el('rect',{x:M.left, y:yScale(yMax), width:iw, height:yScale(TH.abnormal_hi)-yScale(yMax), class:'abn-band'}));
+
+  // abnormal highlight band (x-range spanning first->last abnormal session, padded)
+  const abnSessions = sessions.filter(s=>s.abnormal);
+  if(abnSessions.length){
+    const ax0 = xScale(new Date(abnSessions[0].start).getTime()) - 26;
+    const ax1 = xScale(new Date(abnSessions[abnSessions.length-1].start).getTime()) + 26;
+    svg.appendChild(el('rect',{x:ax0, y:M.top, width:ax1-ax0, height:ih, fill:'rgba(217,75,75,0.06)'}));
+    const lbl = el('text',{x:(ax0+ax1)/2, y:M.top+13, class:'abn-label','text-anchor':'middle'});
+    lbl.textContent = 'Abnormal ตรวจพบ'; svg.appendChild(lbl);
+  }
+
+  // gridlines + y labels
+  [0,100,200,300,400,500].forEach(v=>{
+    const y = yScale(v);
+    svg.appendChild(el('line',{x1:M.left,x2:M.left+iw,y1:y,y2:y,class:'grid-line'}));
+    const t = el('text',{x:M.left-10, y:y+3, class:'axis-label', 'text-anchor':'end'});
+    t.textContent = v; svg.appendChild(t);
+  });
+
+  // threshold lines
+  const yHi = yScale(TH.regulated_hi), yLo = yScale(TH.regulated_lo), yAbn = yScale(TH.abnormal_hi);
+  svg.appendChild(el('line',{x1:M.left,x2:M.left+iw,y1:yAbn,y2:yAbn,class:'thresh-line',style:'stroke:var(--critical)'}));
+  const tl0 = el('text',{x:M.left+iw, y:yAbn-5, class:'thresh-label','text-anchor':'end', style:'fill:var(--critical)'});
+  tl0.textContent='400 · Abnormal'; svg.appendChild(tl0);
+  svg.appendChild(el('line',{x1:M.left,x2:M.left+iw,y1:yHi,y2:yHi,class:'thresh-line'}));
+  const tl = el('text',{x:M.left+iw, y:yHi-5, class:'thresh-label','text-anchor':'end'});
+  tl.textContent='300 · Oil Cooling'; svg.appendChild(tl);
+  svg.appendChild(el('line',{x1:M.left,x2:M.left+iw,y1:yLo,y2:yLo,class:'thresh-line lo'}));
+  const tl2 = el('text',{x:M.left+iw, y:yLo-5, class:'thresh-label','text-anchor':'end', style:'fill:var(--flow)'});
+  tl2.textContent='200 · Regulated'; svg.appendChild(tl2);
+
+  // month tick labels (only within plotted range)
+  const months = [['2026-06-01','มิ.ย.'],['2026-07-01','ก.ค.'],['2026-08-01','ส.ค.']];
+  months.forEach(([d,label])=>{
+    const x = xScale(new Date(d).getTime());
+    if(x<M.left-0.5 || x>M.left+iw+0.5) return;
+    svg.appendChild(el('line',{x1:x,x2:x,y1:M.top,y2:M.top+ih,class:'grid-line'}));
+    const t = el('text',{x:x, y:M.top+ih+18, class:'axis-label','text-anchor':'middle'});
+    t.textContent=label; svg.appendChild(t);
+  });
+  const firstX = xScale(t0);
+  const startTag = el('text',{x:firstX, y:M.top+ih+18, class:'axis-label','text-anchor':'start'});
+  startTag.textContent = new Date(sessions[0].start).toLocaleDateString('th-TH',{day:'2-digit',month:'short'});
+  svg.appendChild(startTag);
+
+  // whiskers
+  const whiskerEls = [];
+  sessions.forEach(s=>{
+    const x = xScale(new Date(s.start).getTime());
+    const w = el('line',{x1:x,x2:x,y1:yScale(s.max),y2:yScale(s.min),class:'whisker'+(s.abnormal?' abnormal':'')});
+    w.dataset.cat = s._cat;
+    svg.appendChild(w);
+    whiskerEls.push(w);
+  });
+
+  // mean line
+  const pathD = sessions.map((s,i)=>{
+    const x = xScale(new Date(s.start).getTime());
+    const y = yScale(s.mean);
+    return (i===0?'M':'L')+x+','+y;
+  }).join(' ');
+  const meanLine = el('path',{d:pathD, class:'mean-line'});
+  svg.appendChild(meanLine);
+
+  // dots + hover targets
+  const dotEls = [];
+  sessions.forEach(s=>{
+    const x = xScale(new Date(s.start).getTime());
+    const y = yScale(s.mean);
+    const dotClass = s._cat==='abnormal' ? 'abnormal' : s._cat==='idle' ? 'idle' : '';
+    const dot = el('circle',{cx:x,cy:y,r: s.abnormal?6:5,class:'mean-dot '+dotClass});
+    dot.dataset.cat = s._cat;
+    svg.appendChild(dot);
+    dotEls.push(dot);
+    const hit = el('circle',{cx:x,cy:y,r:14,fill:'transparent',style:'cursor:pointer'});
+    hit.addEventListener('mousemove',(e)=>{
+      const cls = classify(s);
+      showTT(container, x, y-16, `<div class="tt-title">${s.label} &middot; ${cls.label}</div>Mean <b>${fmt1(s.mean)}</b> · Min ${fmt1(s.min)} · Max ${fmt1(s.max)} L/min<br>n = ${fmt0(s.n)} จุด · Oil Cooling: ${fmt1(s.pct_cooling+s.pct_abnormal)}%${s.abnormal?`<br><span style="color:var(--critical)">Abnormal: ${s.n_cycles_abn} ครั้ง เฉลี่ย ${(s.avg_dur_abn_s/60).toFixed(1)} นาที/ครั้ง</span>`:''}`);
+    });
+    hit.addEventListener('mouseleave', hideTT);
+    svg.appendChild(hit);
+  });
+
+  container.appendChild(svg);
+
+  onFilterChange((key)=>{
+    dotEls.forEach(d=> d.classList.toggle('dimmed', key!=='all' && d.dataset.cat!==key));
+    whiskerEls.forEach(w=> w.classList.toggle('dimmed', key!=='all' && w.dataset.cat!==key));
+  });
+})();
+
+/* ---------------- Chart 2: extended window (26 Jul - 1 Aug), segmented ---------------- */
+(function(){
+  const W = 1080, H = 300, M = {top:24,right:20,bottom:30,left:52};
+  const iw = W-M.left-M.right, ih = H-M.top-M.bottom;
+  const container = document.getElementById('chartWindow');
+  const svg = el('svg',{class:'chart', viewBox:`0 0 ${W} ${H}`});
+  const segs = DATA.extended_window;
+
+  const t0 = new Date(segs[0].points[0].t).getTime();
+  const lastSeg = segs[segs.length-1];
+  const t1 = new Date(lastSeg.points[lastSeg.points.length-1].t).getTime();
+  const xScale = t => M.left + ((t-t0)/(t1-t0))*iw;
+  const yMin = -40, yMax = 520;
+  const yScale = v => M.top + ih - ((v-yMin)/(yMax-yMin))*ih;
+
+  [0,200,300,400,500].forEach(v=>{
+    const y = yScale(v);
+    svg.appendChild(el('line',{x1:M.left,x2:M.left+iw,y1:y,y2:y,class:'grid-line'}));
+    const t = el('text',{x:M.left-10,y:y+3,class:'axis-label','text-anchor':'end'});
+    t.textContent=v; svg.appendChild(t);
+  });
+  const yThresh = yScale(300);
+  svg.appendChild(el('line',{x1:M.left,x2:M.left+iw,y1:yThresh,y2:yThresh,class:'thresh-line'}));
+  const yThreshAbn = yScale(400);
+  svg.appendChild(el('line',{x1:M.left,x2:M.left+iw,y1:yThreshAbn,y2:yThreshAbn,class:'thresh-line',style:'stroke:var(--critical)'}));
+
+  // abnormal segments highlight band
+  const abnSegs = segs.filter(s=>s.abnormal);
+  if(abnSegs.length){
+    const ax0 = xScale(new Date(abnSegs[0].points[0].t).getTime());
+    const lastAbn = abnSegs[abnSegs.length-1];
+    const ax1 = xScale(new Date(lastAbn.points[lastAbn.points.length-1].t).getTime());
+    svg.appendChild(el('rect',{x:ax0, y:M.top, width:ax1-ax0, height:ih, class:'abn-band'}));
+  }
+
+  const defs = el('defs',{});
+  const grad = el('linearGradient',{id:'areaGradient',x1:'0',y1:'0',x2:'0',y2:'1'});
+  grad.appendChild(el('stop',{offset:'0%','stop-color':'var(--flow)','stop-opacity':'0.32'}));
+  grad.appendChild(el('stop',{offset:'100%','stop-color':'var(--flow)','stop-opacity':'0.02'}));
+  defs.appendChild(grad);
+  svg.appendChild(defs);
+
+  // day boundary gridlines derived from segment starts (after the first)
+  segs.slice(1).forEach(s=>{
+    const x = xScale(new Date(s.points[0].t).getTime());
+    svg.appendChild(el('line',{x1:x,x2:x,y1:M.top,y2:M.top+ih,class:'daybound'}));
+  });
+
+  segs.forEach(seg=>{
+    const isIdle = seg.is_idle;
+    const pts = seg.points;
+    const x0 = xScale(new Date(pts[0].t).getTime());
+    const x1s = xScale(new Date(pts[pts.length-1].t).getTime());
+    if(isIdle){
+      const lineD = pts.map((p,i)=>{
+        const x=xScale(new Date(p.t).getTime()); const y=yScale(Math.max(p.mean,yMin+8));
+        return (i===0?'M':'L')+x+','+y;
+      }).join(' ');
+      svg.appendChild(el('path',{d:lineD, class:'idle-line'}));
+    } else {
+      const areaD = 'M'+x0+','+yScale(yMin)+' '+ pts.map(p=>{
+        const x=xScale(new Date(p.t).getTime()); const y=yScale(Math.max(p.mean,yMin));
+        return 'L'+x+','+y;
+      }).join(' ') + ' L'+x1s+','+yScale(yMin)+' Z';
+      svg.appendChild(el('path',{d:areaD, class:'area-fill'}));
+      const lineD = pts.map((p,i)=>{
+        const x=xScale(new Date(p.t).getTime()); const y=yScale(p.mean);
+        return (i===0?'M':'L')+x+','+y;
+      }).join(' ');
+      const lineEl = el('path',{d:lineD, class:'area-line'});
+      if(seg.abnormal) lineEl.style.stroke = 'var(--critical)';
+      svg.appendChild(lineEl);
+    }
+    const segLabel = el('text',{x:(x0+x1s)/2, y:M.top+ih+18, class:'seg-label'+(seg.abnormal?' abnormal':'')});
+    segLabel.textContent = seg.label + (isIdle?' (หยุด)':'');
+    svg.appendChild(segLabel);
+
+    // hover overlay per segment
+    const overlay = el('rect',{x:x0,y:M.top,width:Math.max(x1s-x0,1),height:ih,fill:'transparent',style:'cursor:crosshair'});
+    overlay.addEventListener('mousemove',(e)=>{
+      const rect = svg.getBoundingClientRect();
+      const px = (e.clientX-rect.left) * (W/rect.width);
+      const t = t0 + ((px-M.left)/iw)*(t1-t0);
+      let closest = pts[0], best=Infinity;
+      pts.forEach(p=>{ const diff = Math.abs(new Date(p.t).getTime()-t); if(diff<best){best=diff; closest=p;} });
+      const x = xScale(new Date(closest.t).getTime());
+      const dt = new Date(closest.t);
+      const label = dt.toLocaleDateString('th-TH',{day:'2-digit',month:'short'})+' '+dt.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+      showTT(container, x, yScale(closest.mean)-16, `<div class="tt-title">${label} ${seg.abnormal?'&middot; Abnormal':''}</div>Flow <b>${fmt1(closest.mean)}</b> L/min`);
+    });
+    overlay.addEventListener('mouseleave', hideTT);
+    svg.appendChild(overlay);
+  });
+
+  container.appendChild(svg);
+})();
+
+/* ---------------- Chart 2b: Flow vs Quench Temp, FULL PERIOD overview (9 May - 1 Aug, per-session) ---------------- */
+(function(){
+  const Q = DATA.quench;
+  const qsessions = Q.sessions; // 13 sessions, same order as `sessions`
+  const faultSet = new Set(Q.excluded_cold_labels); // 26/27/29 Jul - sensor fault
+  const W = 1080, HF = 150, HT = 150, M = {top:16,right:24,bottom:34,left:52};
+  const iw = W-M.left-M.right, ihF = HF-M.top-M.bottom, ihT = HT-M.top-M.bottom;
+
+  const t0 = new Date(sessions[0].start).getTime();
+  const t1 = new Date(sessions[sessions.length-1].start).getTime();
+  const xScale = t => M.left + ((t-t0)/(t1-t0))*iw;
+  const xOf = s => xScale(new Date(s.start).getTime());
+
+  const months = [['2026-06-01','มิ.ย.'],['2026-07-01','ก.ค.'],['2026-08-01','ส.ค.']];
+  function drawMonthTicks(svg, y0, y1){
+    months.forEach(([d,label])=>{
+      const x = xScale(new Date(d).getTime());
+      if(x<M.left-0.5 || x>M.left+iw+0.5) return;
+      svg.appendChild(el('line',{x1:x,x2:x,y1:y0,y2:y1,class:'grid-line'}));
+      const t = el('text',{x:x, y:y1+18, class:'axis-label','text-anchor':'middle'});
+      t.textContent=label; svg.appendChild(t);
+    });
+    const startTag = el('text',{x:xScale(t0), y:y1+18, class:'axis-label','text-anchor':'start'});
+    startTag.textContent = new Date(sessions[0].start).toLocaleDateString('th-TH',{day:'2-digit',month:'short'});
+    svg.appendChild(startTag);
+  }
+
+  /* --- Flow panel (top): reuse main `sessions` mean/min/max, same as Chart 1 --- */
+  (function(){
+    const container = document.getElementById('chartFlowFull');
+    const svg = el('svg',{class:'chart', viewBox:`0 0 ${W} ${HF}`});
+    const yMin=-40, yMax=520;
+    const yScale = v => M.top + ihF - ((v-yMin)/(yMax-yMin))*ihF;
+
+    const abnSessions = sessions.filter(s=>s.abnormal);
+    if(abnSessions.length){
+      const ax0 = xOf(abnSessions[0])-14, ax1 = xOf(abnSessions[abnSessions.length-1])+14;
+      svg.appendChild(el('rect',{x:ax0,y:M.top,width:ax1-ax0,height:ihF,class:'abn-band'}));
+    }
+    [0,300].forEach(v=>{
+      const y=yScale(v);
+      svg.appendChild(el('line',{x1:M.left,x2:M.left+iw,y1:y,y2:y,class:'grid-line'}));
+      const t=el('text',{x:M.left-10,y:y+3,class:'axis-label','text-anchor':'end'}); t.textContent=v; svg.appendChild(t);
+    });
+    drawMonthTicks(svg, M.top, M.top+ihF);
+
+    const lineD = sessions.map((s,i)=>{ const x=xOf(s); const y=yScale(s.mean); return (i===0?'M':'L')+x+','+y; }).join(' ');
+    svg.appendChild(el('path',{d:lineD, class:'area-line'}));
+    sessions.forEach(s=>{
+      const x = xOf(s);
+      svg.appendChild(el('line',{x1:x,x2:x,y1:yScale(s.max),y2:yScale(s.min),class:'whisker'+(s.abnormal?' abnormal':'')}));
+      const dot = el('circle',{cx:x,cy:yScale(s.mean),r:3.5,fill:s.abnormal?'var(--critical)':'var(--flow)'});
+      svg.appendChild(dot);
+      const hit = el('circle',{cx:x,cy:yScale(s.mean),r:10,fill:'transparent',style:'cursor:pointer'});
+      hit.addEventListener('mousemove',()=> showTT(container, x, yScale(s.max)-14, `<div class="tt-title">${s.label}${s.abnormal?' &middot; Abnormal':''}</div>Flow เฉลี่ย <b>${fmt1(s.mean)}</b> &middot; min ${fmt1(s.min)} &middot; max ${fmt1(s.max)} L/min`));
+      hit.addEventListener('mouseleave', hideTT);
+      svg.appendChild(hit);
+    });
+    const lbl = el('text',{x:M.left,y:M.top-3,class:'temp-band-note'}); lbl.textContent='Oil cooler flow [L/M] — เฉลี่ย/min–max ต่อเซสชัน'; svg.appendChild(lbl);
+    container.appendChild(svg);
+  })();
+
+  /* --- Temp panel (bottom): all 13 sessions, sensor-fault sessions marked distinctly --- */
+  (function(){
+    const container = document.getElementById('chartTempFull');
+    const svg = el('svg',{class:'chart', viewBox:`0 0 ${W} ${HT}`});
+    const yMin=-25, yMax=145;
+    const yScale = v => M.top + ihT - ((v-yMin)/(yMax-yMin))*ihT;
+
+    const abnLabels = new Set(['30 Jul','31 Jul','01 Aug']);
+    const abnQ = qsessions.filter(s=>abnLabels.has(s.label));
+    if(abnQ.length){
+      const ax0 = xOf(sessions.find(s=>s.label===abnQ[0].label))-14;
+      const ax1 = xOf(sessions.find(s=>s.label===abnQ[abnQ.length-1].label))+14;
+      svg.appendChild(el('rect',{x:ax0,y:M.top,width:ax1-ax0,height:ihT,class:'abn-band'}));
+    }
+    [0,50,100].forEach(v=>{
+      const y=yScale(v);
+      svg.appendChild(el('line',{x1:M.left,x2:M.left+iw,y1:y,y2:y,class:'grid-line'}));
+      const t=el('text',{x:M.left-10,y:y+3,class:'axis-label','text-anchor':'end'}); t.textContent=v; svg.appendChild(t);
+    });
+    // baseline band mu +/- 2sd
+    const b = Q.hot_baseline;
+    const yLo = yScale(b.mu_mean - 2*b.sd_mean), yHi = yScale(b.mu_mean + 2*b.sd_mean);
+    svg.appendChild(el('rect',{x:M.left,y:yHi,width:iw,height:Math.max(yLo-yHi,1),fill:'var(--temp-soft)'}));
+    const yMu = yScale(b.mu_mean);
+    svg.appendChild(el('line',{x1:M.left,x2:M.left+iw,y1:yMu,y2:yMu,class:'thresh-line',style:'stroke:var(--temp)'}));
+    drawMonthTicks(svg, M.top, M.top+ihT);
+
+    // connect only the trustworthy (non-fault) points with a line, in date order
+    const trust = qsessions.filter(s=>!faultSet.has(s.label));
+    const lineD = trust.map((s,i)=>{ const x=xOf(sessions.find(ms=>ms.label===s.label)); const y=yScale(s.temp_mean); return (i===0?'M':'L')+x+','+y; }).join(' ');
+    svg.appendChild(el('path',{d:lineD, class:'temp-line'}));
+
+    qsessions.forEach(qs=>{
+      const ms = sessions.find(s=>s.label===qs.label);
+      const x = xOf(ms);
+      const isFault = faultSet.has(qs.label);
+      const isAbn = abnLabels.has(qs.label);
+      if(isFault){
+        // diamond marker + short whisker, gray, to flag sensor fault without letting it compress the axis
+        svg.appendChild(el('line',{x1:x,x2:x,y1:yScale(qs.temp_max),y2:yScale(qs.temp_min),class:'fault-mark'}));
+        const d = 4;
+        const cy = yScale(qs.temp_mean);
+        svg.appendChild(el('path',{d:`M${x-d},${cy} L${x},${cy-d} L${x+d},${cy} L${x},${cy+d} Z`, fill:'var(--idle)'}));
+      } else {
+        svg.appendChild(el('line',{x1:x,x2:x,y1:yScale(qs.temp_max),y2:yScale(qs.temp_min),class:'fault-mark',style:'stroke:var(--temp-line)'}));
+        svg.appendChild(el('circle',{cx:x,cy:yScale(qs.temp_mean),r:3.5,fill:isAbn?'var(--critical)':'var(--temp)'}));
+      }
+      const hit = el('circle',{cx:x,cy:yScale(qs.temp_mean),r:10,fill:'transparent',style:'cursor:pointer'});
+      hit.addEventListener('mousemove',()=>{
+        const body = isFault
+          ? `<span style="color:var(--idle)">เซนเซอร์อ่านค่าผิดปกติ</span> — เฉลี่ย ${fmt1(qs.temp_mean)}° (${fmt1(qs.temp_min)}–${fmt1(qs.temp_max)}) &middot; ไม่นับใน baseline`
+          : `Temp เฉลี่ย <b>${fmt1(qs.temp_mean)}°</b> &middot; min ${fmt1(qs.temp_min)} &middot; max ${fmt1(qs.temp_max)}${isAbn?' &middot; <span style=\"color:var(--critical)\">Abnormal (Flow)</span>':''}`;
+        showTT(container, x, yScale(qs.temp_max)-14, `<div class="tt-title">${qs.label}</div>${body}`);
+      });
+      hit.addEventListener('mouseleave', hideTT);
+      svg.appendChild(hit);
+    });
+    const lbl = el('text',{x:M.left,y:M.top-3,class:'temp-band-note'}); lbl.textContent=`Quench tank Temp [°] — แถบม่วงคือ baseline ปกติ (${fmt1(b.mu_mean-2*b.sd_mean)}–${fmt1(b.mu_mean+2*b.sd_mean)}) &middot; ◇ = เซนเซอร์ผิดปกติ`; svg.appendChild(lbl);
+    container.appendChild(svg);
+  })();
+})();
+
+/* ---------------- Chart 2c: Flow vs Quench Temp, ZOOMED WINDOW (26 Jul - 1 Aug, downsampled) ---------------- */
+(function(){
+  const Q = DATA.quench;
+  const segs = Q.extended_window;
+  const W = 1080, HF = 150, HT = 150, M = {top:14,right:20,bottom:26,left:52};
+  const iw = W-M.left-M.right, ihF = HF-M.top-M.bottom, ihT = HT-M.top-M.bottom;
+
+  const t0 = new Date(segs[0].points[0].t).getTime();
+  const lastSeg = segs[segs.length-1];
+  const t1 = new Date(lastSeg.points[lastSeg.points.length-1].t).getTime();
+  const xScale = t => M.left + ((t-t0)/(t1-t0))*iw;
+
+  // day boundary x-positions (shared by both panels)
+  const dayBoundsX = segs.slice(1).map(s=> xScale(new Date(s.points[0].t).getTime()));
+  const abnSegsQ = segs.filter(s=>s.abnormal);
+  let abnX0=null, abnX1=null;
+  if(abnSegsQ.length){
+    abnX0 = xScale(new Date(abnSegsQ[0].points[0].t).getTime());
+    const lastAbn = abnSegsQ[abnSegsQ.length-1];
+    abnX1 = xScale(new Date(lastAbn.points[lastAbn.points.length-1].t).getTime());
+  }
+
+  /* --- Flow panel (top) --- */
+  (function(){
+    const container = document.getElementById('chartFlowPanel');
+    const svg = el('svg',{class:'chart', viewBox:`0 0 ${W} ${HF}`});
+    const yMin=-40, yMax=520;
+    const yScale = v => M.top + ihF - ((v-yMin)/(yMax-yMin))*ihF;
+
+    if(abnX0!==null) svg.appendChild(el('rect',{x:abnX0,y:M.top,width:abnX1-abnX0,height:ihF,class:'abn-band'}));
+    [0,300].forEach(v=>{
+      const y=yScale(v);
+      svg.appendChild(el('line',{x1:M.left,x2:M.left+iw,y1:y,y2:y,class:'grid-line'}));
+      const t=el('text',{x:M.left-10,y:y+3,class:'axis-label','text-anchor':'end'}); t.textContent=v; svg.appendChild(t);
+    });
+    dayBoundsX.forEach(x=> svg.appendChild(el('line',{x1:x,x2:x,y1:M.top,y2:M.top+ihF,class:'daybound'})));
+
+    segs.forEach(seg=>{
+      const pts = seg.points;
+      const lineD = pts.map((p,i)=>{ const x=xScale(new Date(p.t).getTime()); const y=yScale(Math.max(p.flow,yMin)); return (i===0?'M':'L')+x+','+y; }).join(' ');
+      const lineEl = el('path',{d:lineD, class:'area-line'});
+      if(seg.is_idle) lineEl.style.strokeDasharray='3 3';
+      if(seg.abnormal) lineEl.style.stroke='var(--critical)';
+      svg.appendChild(lineEl);
+    });
+    const lbl = el('text',{x:M.left,y:M.top-2,class:'temp-band-note'}); lbl.textContent='Oil cooler flow [L/M]'; svg.appendChild(lbl);
+    container.appendChild(svg);
+
+    const overlay = el('rect',{x:M.left,y:M.top,width:iw,height:ihF,fill:'transparent',style:'cursor:crosshair'});
+    overlay.addEventListener('mousemove',(e)=>{
+      const rect = svg.getBoundingClientRect();
+      const px = (e.clientX-rect.left) * (W/rect.width);
+      const t = t0 + ((px-M.left)/iw)*(t1-t0);
+      let closest=null, closestSeg=null, best=Infinity;
+      segs.forEach(seg=> seg.points.forEach(p=>{ const diff=Math.abs(new Date(p.t).getTime()-t); if(diff<best){best=diff; closest=p; closestSeg=seg;} }));
+      if(!closest) return;
+      const x = xScale(new Date(closest.t).getTime());
+      const dt = new Date(closest.t);
+      const label = dt.toLocaleDateString('th-TH',{day:'2-digit',month:'short'})+' '+dt.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+      showTT(container, x, yScale(closest.flow)-16, `<div class="tt-title">${label}${closestSeg.abnormal?' &middot; Abnormal':''}</div>Flow <b>${fmt1(closest.flow)}</b> L/min &middot; Temp <b>${fmt1(closest.temp)}</b>`);
+    });
+    overlay.addEventListener('mouseleave', hideTT);
+    svg.appendChild(overlay);
+  })();
+
+  /* --- Temp panel (bottom) --- */
+  (function(){
+    const container = document.getElementById('chartTempPanel');
+    const svg = el('svg',{class:'chart', viewBox:`0 0 ${W} ${HT}`});
+    const yMin=0, yMax=145;
+    const yScale = v => M.top + ihT - ((v-yMin)/(yMax-yMin))*ihT;
+
+    if(abnX0!==null) svg.appendChild(el('rect',{x:abnX0,y:M.top,width:abnX1-abnX0,height:ihT,class:'abn-band'}));
+    [0,50,100].forEach(v=>{
+      const y=yScale(v);
+      svg.appendChild(el('line',{x1:M.left,x2:M.left+iw,y1:y,y2:y,class:'grid-line'}));
+      const t=el('text',{x:M.left-10,y:y+3,class:'axis-label','text-anchor':'end'}); t.textContent=v; svg.appendChild(t);
+    });
+    // hot-baseline band (mu +/- 2sd) drawn only across non-idle segments visually via a full-width guide
+    const b = Q.hot_baseline;
+    const yLo = yScale(b.mu_mean - 2*b.sd_mean), yHi = yScale(b.mu_mean + 2*b.sd_mean);
+    svg.appendChild(el('rect',{x:M.left,y:yHi,width:iw,height:Math.max(yLo-yHi,1),fill:'var(--temp-soft)'}));
+    const yMu = yScale(b.mu_mean);
+    svg.appendChild(el('line',{x1:M.left,x2:M.left+iw,y1:yMu,y2:yMu,class:'thresh-line',style:'stroke:var(--temp)'}));
+    dayBoundsX.forEach(x=> svg.appendChild(el('line',{x1:x,x2:x,y1:M.top,y2:M.top+ihT,class:'daybound'})));
+
+    segs.forEach(seg=>{
+      const pts = seg.points;
+      const lineD = pts.map((p,i)=>{ const x=xScale(new Date(p.t).getTime()); const y=yScale(Math.max(p.temp,yMin)); return (i===0?'M':'L')+x+','+y; }).join(' ');
+      const cls = 'temp-line'+(seg.is_idle?' idle':'');
+      svg.appendChild(el('path',{d:lineD, class:cls}));
+      const segLabel = el('text',{x:xScale(new Date(pts[Math.floor(pts.length/2)].t).getTime()), y:M.top+ihT+18, class:'seg-label'+(seg.abnormal?' abnormal':'')});
+      segLabel.textContent = seg.label + (seg.is_idle?' (หยุด)':'');
+      svg.appendChild(segLabel);
+    });
+    const lbl = el('text',{x:M.left,y:M.top-2,class:'temp-band-note'}); lbl.textContent=`Quench tank Temp [°] — แถบม่วงคือช่วงปกติ (baseline ±2σ = ${fmt1(b.mu_mean-2*b.sd_mean)}–${fmt1(b.mu_mean+2*b.sd_mean)})`; svg.appendChild(lbl);
+    container.appendChild(svg);
+
+    const overlay = el('rect',{x:M.left,y:M.top,width:iw,height:ihT,fill:'transparent',style:'cursor:crosshair'});
+    overlay.addEventListener('mousemove',(e)=>{
+      const rect = svg.getBoundingClientRect();
+      const px = (e.clientX-rect.left) * (W/rect.width);
+      const t = t0 + ((px-M.left)/iw)*(t1-t0);
+      let closest=null, closestSeg=null, best=Infinity;
+      segs.forEach(seg=> seg.points.forEach(p=>{ const diff=Math.abs(new Date(p.t).getTime()-t); if(diff<best){best=diff; closest=p; closestSeg=seg;} }));
+      if(!closest) return;
+      const x = xScale(new Date(closest.t).getTime());
+      const dt = new Date(closest.t);
+      const label = dt.toLocaleDateString('th-TH',{day:'2-digit',month:'short'})+' '+dt.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+      showTT(container, x, yScale(closest.temp)-16, `<div class="tt-title">${label}${closestSeg.abnormal?' &middot; Abnormal':''}</div>Temp <b>${fmt1(closest.temp)}</b> &middot; Flow <b>${fmt1(closest.flow)}</b> L/min`);
+    });
+    overlay.addEventListener('mouseleave', hideTT);
+    svg.appendChild(overlay);
+  })();
+
+  /* --- stat tiles + verdict --- */
+  const row = document.getElementById('quenchStatRow');
+  const b = Q.hot_baseline;
+  let tilesHtml = `<div class="qs-tile"><div class="qs-label">Baseline Quench Temp (${b.n} เซสชันปกติ)</div><div class="qs-val">${fmt1(b.mu_mean)}°<span class="qs-sub" style="margin-left:6px;font-size:12px">± ${fmt1(b.sd_mean)}</span></div><div class="qs-sub">คำนวณจาก 09 พ.ค. – 18 ก.ค. (คัดตัวที่เซนเซอร์ผิดปกติออก)</div></div>`;
+  Q.abnormal_temp.forEach(s=>{
+    const zClass = Math.abs(s.z_mean) < 1 ? 'ok' : '';
+    tilesHtml += `<div class="qs-tile abn"><div class="qs-label">${s.label} &middot; Abnormal Flow</div><div class="qs-val">${fmt1(s.temp_mean)}°<span class="z ${zClass}">z=${s.z_mean>0?'+':''}${fmt1(s.z_mean)}</span></div><div class="qs-sub">Flow เฉลี่ย ${fmt1(s.flow_mean)} &middot; พีค ${fmt1(s.flow_max)} L/min</div></div>`;
+  });
+  row.innerHTML = tilesHtml;
+
+  const verdict = document.getElementById('quenchVerdict');
+  verdict.innerHTML = `<b>Quench tank Temp ไม่ได้สูงขึ้นผิดปกติในช่วง Abnormal:</b> ทั้ง 3 วัน (30 ก.ค., 31 ก.ค., 1 ส.ค.) อุณหภูมิเฉลี่ยอยู่ที่ ${Q.abnormal_temp.map(s=>fmt1(s.temp_mean)+'°').join(' / ')} ซึ่งอยู่ในช่วง baseline ปกติ (z-score ${Q.abnormal_temp.map(s=>(s.z_mean>0?'+':'')+fmt1(s.z_mean)).join(' / ')} — ทั้งหมดอยู่ในช่วง ±1σ) แม้ว่า 3 เซสชันนี้จะมีค่า Oil cooler flow พีคสูงที่สุดในชุดข้อมูลทั้งหมด (สูงสุด 491.6 L/min) กล่าวคือ Flow ที่พุ่งสูงผิดปกติ<b>ไม่ได้เป็นผลจากอุณหภูมิน้ำมัน Quench ที่สูงขึ้น</b> — น่าจะมีสาเหตุอื่น เช่น วาล์ว/เซนเซอร์ควบคุมการไหล มากกว่าการตอบสนองต่อความร้อน (ในภาพรวมทั้ง 10 เซสชันที่ข้อมูลน่าเชื่อถือ ค่าเฉลี่ย Flow กับ Temp มีความสัมพันธ์ระดับปานกลางเท่านั้น r=${fmt1(Q.corr_mean)})`;
+})();
+
+/* ---------------- Chart 3: cool down cycles per session (bar) ---------------- */
+(function(){
+  const W = 1080, H = 300, M = {top:20,right:20,bottom:44,left:44};
+  const iw = W-M.left-M.right, ih = H-M.top-M.bottom;
+  const container = document.getElementById('chartCycles');
+  const svg = el('svg',{class:'chart', viewBox:`0 0 ${W} ${H}`});
+
+  const maxCycles = Math.max(...sessions.map(s=>s.n_cycles), 1);
+  const yScale = v => M.top + ih - (v/maxCycles)*ih;
+  const bw = iw/sessions.length;
+
+  [0,10,20,30,40].forEach(v=>{
+    if(v>maxCycles+5) return;
+    const y = yScale(v);
+    svg.appendChild(el('line',{x1:M.left,x2:M.left+iw,y1:y,y2:y,class:'grid-line'}));
+    const t = el('text',{x:M.left-8,y:y+3,class:'axis-label','text-anchor':'end'});
+    t.textContent=v; svg.appendChild(t);
+  });
+
+  const barEls = [];
+  sessions.forEach((s,i)=>{
+    const x = M.left + i*bw + bw*0.22;
+    const w = bw*0.56;
+    const h = (s.n_cycles/maxCycles)*ih;
+    const y = M.top+ih-h;
+    const cls = s.n_cycles===0 ? 'none' : (s.abnormal ? 'abnormal' : 'normal');
+    const bar = el('rect',{x, y, width:w, height:Math.max(h,2), rx:3, class:'bar '+cls});
+    bar.dataset.cat = s._cat;
+    svg.appendChild(bar);
+    barEls.push(bar);
+
+    const lbl = el('text',{x:x+w/2, y:M.top+ih+16, class:'bar-label'});
+    lbl.textContent = s.label.split(' ')[0];
+    svg.appendChild(lbl);
+
+    const countLbl = el('text',{x:x+w/2, y:y-6, class:'bar-label', style: s.abnormal?'fill:#ff9b9b':''});
+    countLbl.textContent = s.n_cycles>0 ? s.n_cycles : '–';
+    svg.appendChild(countLbl);
+
+    const hit = el('rect',{x, y:M.top, width:w, height:ih, fill:'transparent', style:'cursor:pointer'});
+    hit.addEventListener('mousemove', ()=>{
+      const mm = (sec)=> (sec/60).toFixed(1);
+      const abnLine = s.n_cycles_abn>0 ? `<br><span style="color:var(--critical)">ในจำนวนนี้ ${s.n_cycles_abn} รอบพีคเกิน 400 (Abnormal) เฉลี่ย ${mm(s.avg_dur_abn_s)} นาที/รอบ</span>` : '';
+      const body = s.n_cycles>0
+        ? `${s.n_cycles} รอบ Oil Cooling &middot; เฉลี่ย <b>${fmt0(s.avg_dur_s)}s</b> (~${mm(s.avg_dur_s)} นาที)<br>สั้นสุด ${fmt0(s.min_dur_s)}s &middot; ยาวสุด ${fmt0(s.max_dur_s)}s<br>รวมเวลาที่ Oil Cooling ทำงาน: ${mm(s.total_dur_s)} นาที${abnLine}`
+        : (s.is_idle ? 'เครื่องหยุด/บำรุงรักษา — ไม่มีรอบ Oil Cooling' : 'ไม่มีค่าที่เกิน 300 L/min ในเซสชันนี้');
+      showTT(container, x+w/2, y-16, `<div class="tt-title">${s.label}</div>${body}`);
+    });
+    hit.addEventListener('mouseleave', hideTT);
+    svg.appendChild(hit);
+  });
+
+  container.appendChild(svg);
+
+  onFilterChange((key)=>{
+    barEls.forEach(b=> b.classList.toggle('dimmed', key!=='all' && b.dataset.cat!==key));
+  });
+
+  const activeSessions = sessions.filter(s=>s.n_cycles>0);
+  const avgAll = activeSessions.reduce((a,s)=>a+s.avg_dur_s,0)/activeSessions.length;
+  const abnormalActive = sessions.filter(s=>s.abnormal);
+  const totalAbnCycles = abnormalActive.reduce((a,s)=>a+s.n_cycles_abn,0);
+  const avgAbnAll = abnormalActive.reduce((a,s)=>a+s.n_cycles_abn*s.avg_dur_abn_s,0)/totalAbnCycles;
+  const note = document.getElementById('cycleNote');
+  note.innerHTML = `โดยเฉลี่ยทุกเซสชันที่มีรอบ Oil Cooling ใช้เวลาประมาณ <b>${fmt0(avgAll)} วินาทีต่อรอบ</b> (~${(avgAll/60).toFixed(1)} นาที) — <b style="color:var(--critical)">Abnormal (&gt;400 L/min)</b> เกิดขึ้นเฉพาะใน 3 เซสชันล่าสุด รวม <b>${totalAbnCycles} ครั้ง</b> เฉลี่ย <b>${(avgAbnAll/60).toFixed(1)} นาที/ครั้ง</b> (30 ก.ค.: ${abnormalActive[0]?.n_cycles_abn} ครั้ง เฉลี่ย ${(abnormalActive[0]?.avg_dur_abn_s/60).toFixed(1)} นาที, 31 ก.ค.: ${abnormalActive[1]?.n_cycles_abn} ครั้ง เฉลี่ย ${(abnormalActive[1]?.avg_dur_abn_s/60).toFixed(1)} นาที, 1 ส.ค.: ${abnormalActive[2]?.n_cycles_abn} ครั้ง เฉลี่ย ${(abnormalActive[2]?.avg_dur_abn_s/60).toFixed(1)} นาที) — ระยะเวลาต่อครั้งใกล้เคียงรอบ Oil Cooling ปกติ จุดที่ต่างชัดเจนคือ<b>ความสูงของพีค</b> (สูงสุด 491 L/min เทียบกับปกติที่ไม่เคยเกิน ~352 L/min)`;
+})();
+
+/* ---------------- Donut ---------------- */
+(function(){
+  const dist = DATA.distribution;
+  const total = dist.total;
+  const segs = [
+    {label:'ต่ำกว่า 200 L/min (ต่ำกว่า Regulated / รวมช่วงหยุดเครื่อง)', n:dist.below, colorVar:'--idle'},
+    {label:'200–300 L/min (Regulated)', n:dist.regulated, colorVar:'--flow'},
+    {label:'300–400 L/min (Oil Cooling)', n:dist.cooling, colorVar:'--cool'},
+    {label:'สูงกว่า 400 L/min (Abnormal)', n:dist.abnormal, colorVar:'--critical'},
+  ];
+  const row = document.getElementById('donutRow');
+  const size=220, r=78, cx=size/2, cy=size/2, sw=30;
+  const svg = el('svg',{width:size,height:size,viewBox:`0 0 ${size} ${size}`});
+  const circumference = 2*Math.PI*r;
+  let offset = 0;
+  segs.forEach(s=>{
+    const frac = s.n/total;
+    const len = frac*circumference;
+    const circle = el('circle',{cx:cx,cy:cy,r:r,fill:'none','stroke-width':sw,'stroke-dasharray':`${len} ${circumference-len}`,'stroke-dashoffset':-offset,transform:`rotate(-90 ${cx} ${cy})`});
+    circle.style.stroke = getComputedStyle(document.documentElement).getPropertyValue(s.colorVar);
+    svg.appendChild(circle);
+    offset += len;
+  });
+  const centerLbl = el('text',{x:cx,y:cy-4,'text-anchor':'middle',fill:'var(--text-primary)',style:'font-family:IBM Plex Mono;font-size:20px;font-weight:600'});
+  centerLbl.textContent = fmt0(total);
+  const centerSub = el('text',{x:cx,y:cy+16,'text-anchor':'middle',fill:'var(--text-muted)',style:'font-family:IBM Plex Sans Condensed;font-size:10px;letter-spacing:.05em'});
+  centerSub.textContent = 'จุดข้อมูล';
+  svg.appendChild(centerLbl); svg.appendChild(centerSub);
+  row.appendChild(svg);
+
+  const legendWrap = document.createElement('div');
+  legendWrap.className='donut-legend';
+  segs.forEach(s=>{
+    const pct = (100*s.n/total).toFixed(1);
+    const item = document.createElement('div');
+    item.className='dl-item';
+    item.innerHTML = `<div class="dl-left"><span class="swatch" style="background:var(${s.colorVar})"></span>${s.label}</div><div class="dl-right"><b>${pct}%</b> &middot; ${fmt0(s.n)}</div>`;
+    legendWrap.appendChild(item);
+  });
+  row.appendChild(legendWrap);
+})();
+
+/* ---------------- Table (sortable + filterable) ---------------- */
+(function(){
+  const tbody = document.getElementById('tableBody');
+  function fmtDT(iso){
+    const d = new Date(iso);
+    return d.toLocaleDateString('th-TH',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false});
+  }
+  let sortKey = null, sortDir = 1;
+  function render(){
+    let rows = sessions.slice();
+    if(sortKey) rows.sort((a,b)=> (a[sortKey]-b[sortKey]) * sortDir);
+    tbody.innerHTML = '';
+    rows.forEach(s=>{
+      const cls = classify(s);
+      const tr = document.createElement('tr');
+      tr.dataset.cat = s._cat;
+      tr.className = (activeFilter!=='all' && s._cat!==activeFilter) ? 'row-hidden' : '';
+      tr.innerHTML = `
+        <td class="name">${s.label}</td>
+        <td>${fmtDT(s.start)} – ${fmtDT(s.end).split(' ')[1]}</td>
+        <td>${s.duration_h} ชม.</td>
+        <td>${fmt0(s.n)}</td>
+        <td>${fmt1(s.min)}</td>
+        <td>${fmt1(s.mean)}</td>
+        <td>${fmt1(s.max)}</td>
+        <td>${fmt1(s.pct_cooling+s.pct_abnormal)}%</td>
+        <td>${s.n_cycles_abn>0 ? `<b style="color:var(--critical)">${s.n_cycles_abn}</b> (~${(s.avg_dur_abn_s/60).toFixed(1)} นาที/ครั้ง)` : '–'}</td>
+        <td><span class="pill ${pillCls[cls.key]}">${cls.label}</span></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+  render();
+  document.querySelectorAll('th.sortable').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.dataset.key;
+      if(sortKey===key) sortDir *= -1; else { sortKey = key; sortDir = -1; }
+      document.querySelectorAll('th.sortable').forEach(t=>{
+        t.classList.toggle('active', t===th);
+        const arrow = t.querySelector('.arrow');
+        if(t===th) arrow.textContent = sortDir===1 ? '▴' : '▾';
+      });
+      render();
+    });
+  });
+  onFilterChange(render);
+})();
+</script>
